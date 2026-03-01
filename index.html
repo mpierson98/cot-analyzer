@@ -741,21 +741,22 @@ svg.cot-chart { width: 100%; height: 180px; display: block; }
 
         <div>
           <div class="prob-section-label">Chart Screenshot</div>
-          <!-- File input (hidden, triggered by button) -->
-          <input type="file" id="chartFile" accept="image/*" style="display:none;">
-
-          <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:1.4rem 1rem;text-align:center;background:var(--card2);">
-            <div id="dropIcon" style="font-size:1.6rem;margin-bottom:.5rem;opacity:.5;">📸</div>
-            <div id="dropLabel" style="font-size:.7rem;color:var(--muted2);line-height:1.9;margin-bottom:.8rem;">
-              <strong style="display:block;color:var(--gold);font-size:.75rem;margin-bottom:.3rem;">Two ways to add your chart:</strong>
-              <span style="color:var(--text);">① Click button below to browse file</span><br>
-              <span style="color:var(--text);">② Paste screenshot anywhere on page (Ctrl+V / Cmd+V)</span>
+          <div style="border:2px dashed #222430;border-radius:6px;padding:1.4rem 1rem;text-align:center;background:#14151b;">
+            <div style="font-size:1.4rem;margin-bottom:.5rem;">📸</div>
+            <div style="font-size:.7rem;color:#5c6080;margin-bottom:.9rem;line-height:1.7;">
+              <strong style="display:block;color:#d4a53a;margin-bottom:.3rem;">Select your chart screenshot</strong>
+              Click the button below to browse your files
             </div>
-            <button onclick="document.getElementById('chartFile').click()" style="background:var(--gold);color:var(--bg);border:none;padding:.5rem 1.2rem;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.08em;cursor:pointer;">
-              📂 Browse File
-            </button>
+            <label for="chartFile" style="display:inline-block;background:#d4a53a;color:#07080a;padding:.5rem 1.4rem;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.08em;cursor:pointer;">
+              📂 Choose File
+            </label>
+            <input type="file" id="chartFile" accept="image/png,image/jpeg,image/webp,image/*" style="display:none;">
           </div>
-          <img id="chartPreview" class="chart-preview" style="display:none;margin-top:.7rem;">
+          <div id="previewWrap" style="display:none;margin-top:.7rem;border:2px solid #34c472;border-radius:4px;overflow:hidden;">
+            <img id="chartPreview" style="width:100%;max-height:200px;object-fit:contain;display:block;background:#000;">
+            <div style="padding:.4rem .6rem;background:#14151b;font-size:.6rem;color:#34c472;">✅ Chart loaded — ready to analyze</div>
+          </div>
+        </div>
         </div>
 
         <div>
@@ -1391,66 +1392,45 @@ window.addEventListener('DOMContentLoaded', () => {
 // ---- CHART ANALYSIS ----
 let chartImageBase64 = null;
 
-function saveKey(val) {
-  if (val.startsWith('sk-ant-')) {
-    localStorage.setItem('cot_api_key', val);
-    document.getElementById('keyStatus').textContent = '✅';
-    document.getElementById('keyStatus').style.color = 'var(--green)';
-  } else {
-    document.getElementById('keyStatus').textContent = '🔑';
-    document.getElementById('keyStatus').style.color = 'var(--muted)';
-  }
-}
-
-function loadSavedKey() {
-  const k = localStorage.getItem('cot_api_key');
-  if (k) {
-    document.getElementById('apiKeyInput').value = k;
-    document.getElementById('keyStatus').textContent = '✅';
-    document.getElementById('keyStatus').style.color = 'var(--green)';
-  }
-}
-
 function initPasteZone() {
-  // Attach file input listener properly via JS (not inline onchange)
-  var fileInput = document.getElementById('chartFile');
-  if (fileInput) {
-    fileInput.addEventListener('change', function() {
-      var file = this.files && this.files[0];
-      if (file) loadImageData(file);
-      // Reset so same file can be re-selected
-      this.value = '';
-    });
+  // Attach via JS after DOM ready - most reliable approach
+  var fi = document.getElementById('chartFile');
+  if (fi) {
+    fi.onchange = function() {
+      if (this.files && this.files[0]) {
+        readFile(this.files[0]);
+      }
+    };
   }
-
-  // Global paste listener
+  // Paste support
   document.addEventListener('paste', function(e) {
     var items = e.clipboardData && e.clipboardData.items;
     if (!items) return;
     for (var i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        e.preventDefault();
-        loadImageData(items[i].getAsFile());
+      if (items[i].kind === 'file' && items[i].type.match(/^image\//)) {
+        readFile(items[i].getAsFile());
         return;
       }
     }
   });
 }
 
-function loadImageData(file) {
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const result = e.target.result;
-    const preview = document.getElementById('chartPreview');
-    preview.src = result;
-    preview.style.display = 'block';
-    document.getElementById('dropIcon').textContent = '✅';
-    document.getElementById('dropLabel').innerHTML =
-      '<strong style="display:block;color:var(--green);font-size:.75rem;margin-bottom:.2rem;">Chart loaded!</strong>' +
-      '<span style="font-size:.62rem;color:var(--muted);">Hit the Analyze button below</span>';
-    const mediaType = result.split(';')[0].split(':')[1];
-    chartImageBase64 = { data: result.split(',')[1], media_type: mediaType };
-    const btn = document.getElementById('analyzeBtn');
+function readFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var dataUrl = ev.target.result;
+    // Show preview
+    var img = document.getElementById('chartPreview');
+    var wrap = document.getElementById('previewWrap');
+    img.src = dataUrl;
+    wrap.style.display = 'block';
+    // Store for API call
+    var parts = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (parts) {
+      chartImageBase64 = { media_type: parts[1], data: parts[2] };
+    }
+    // Enable button
+    var btn = document.getElementById('analyzeBtn');
     btn.disabled = false;
     btn.textContent = '⚡ Analyze Chart + COT';
   };
