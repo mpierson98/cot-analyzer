@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COT Analyzer — Mauricio Pierson</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07080a;
+  --surface: #0c0d10;
+  --card: #101115;
+  --card2: #14151b;
+  --border: #1a1b24;
+  --border2: #222430;
+  --text: #bfc3d4;
+  --muted: #3d4056;
+  --muted2: #5c6080;
+  --gold: #d4a53a;
+  --gold2: #f0c060;
+  --gold-bg: rgba(212,165,58,.08);
+  --green: #34c472;
+  --green-bg: rgba(52,196,114,.09);
+  --red: #e04f4f;
+  --red-bg: rgba(224,79,79,.09);
+  --coffee: #c47840;
+  --coffee-bg: rgba(196,120,64,.09);
+  --wti: #e8a020;
+  --wti-bg: rgba(232,160,32,.09);
+  --blue: #4a8fff;
+  --r: 6px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;min-height:100vh;}
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1.2rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo-wrap { display: flex; align-items: baseline; gap: 1rem; }
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: .15em; color: var(--gold); }
+.logo-sub { font-size: .55rem; letter-spacing: .25em; color: var(--muted2); text-transform: uppercase; }
+.fetch-btn {
+  background: var(--gold);
+  color: var(--bg);
+  border: none;
+  padding: .6rem 1.4rem;
+  border-radius: var(--r);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: .95rem;
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.fetch-btn:hover { background: var(--gold2); }
+.fetch-btn:disabled { opacity: .5; cursor: not-allowed; }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.last-updated { font-size: .58rem; letter-spacing: .1em; color: var(--muted); }
+
+/* LAYOUT */
+.main { max-width: 1140px; margin: 0 auto; padding: 1.5rem; }
+
+/* SIGNAL CARDS — the hero */
+.signals { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.signal-card {
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 1.8rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .3s;
+}
+.signal-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity .5s;
+}
+.signal-card.bull { border-color: rgba(52,196,114,.35); }
+.signal-card.bull::before { background: radial-gradient(ellipse at top left, rgba(52,196,114,.06), transparent 60%); opacity: 1; }
+.signal-card.bear { border-color: rgba(224,79,79,.35); }
+.signal-card.bear::before { background: radial-gradient(ellipse at top left, rgba(224,79,79,.06), transparent 60%); opacity: 1; }
+.signal-card.neutral { border-color: var(--border2); }
+
+.inst-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .25rem .7rem;
+  border-radius: 3px;
+  font-size: .6rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.inst-tag.coffee { background: var(--coffee-bg); color: var(--coffee); }
+.inst-tag.wti { background: var(--wti-bg); color: var(--wti); }
+
+.signal-label {
+  font-size: .55rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .4rem;
+}
+.signal-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3rem;
+  letter-spacing: .05em;
+  line-height: 1;
+  margin-bottom: .3rem;
+}
+.signal-value.bull { color: var(--green); }
+.signal-value.bear { color: var(--red); }
+.signal-value.neutral { color: var(--muted2); }
+
+.signal-score {
+  font-size: .7rem;
+  color: var(--muted2);
+  margin-bottom: 1.2rem;
+}
+.signal-score span { color: var(--text); }
+
+/* METER */
+.meter-wrap { margin-bottom: 1.2rem; }
+.meter-label { font-size: .52rem; letter-spacing: .15em; color: var(--muted); text-transform: uppercase; margin-bottom: .4rem; display: flex; justify-content: space-between; }
+.meter-track { height: 6px; background: var(--border2); border-radius: 3px; overflow: visible; position: relative; }
+.meter-fill { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(.4,0,.2,1); position: relative; }
+.meter-fill.bull-fill { background: linear-gradient(90deg, #1a8a4a, var(--green)); }
+.meter-fill.bear-fill { background: linear-gradient(90deg, var(--red), #a03030); }
+.meter-fill.neutral-fill { background: var(--muted); }
+
+/* POSITIONING BARS */
+.pos-section { margin-top: 1rem; }
+.pos-row { display: flex; align-items: center; gap: .8rem; margin-bottom: .5rem; }
+.pos-name { width: 90px; font-size: .6rem; color: var(--muted2); flex-shrink: 0; }
+.pos-bar-wrap { flex: 1; display: flex; align-items: center; height: 14px; position: relative; background: var(--border); border-radius: 2px; overflow: hidden; }
+.pos-long { height: 100%; background: var(--green); opacity: .7; border-radius: 2px 0 0 2px; transition: width 1s ease; }
+.pos-short { height: 100%; background: var(--red); opacity: .7; border-radius: 0 2px 2px 0; transition: width 1s ease; }
+.pos-net { width: 70px; text-align: right; font-size: .65rem; font-weight: 500; }
+.pos-net.pos { color: var(--green); }
+.pos-net.neg { color: var(--red); }
+
+/* DATA GRID */
+.data-section { margin-bottom: 1.5rem; }
+.section-head {
+  font-size: .55rem;
+  letter-spacing: .25em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .8rem;
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+}
+.section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* HISTORY TABLE */
+.history-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.history-head {
+  padding: .8rem 1rem;
+  background: var(--card2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.history-title { font-size: .62rem; letter-spacing: .1em; color: var(--text); text-transform: uppercase; font-weight: 500; }
+
+.htable { width: 100%; border-collapse: collapse; font-size: .68rem; }
+.htable th { font-size: .5rem; letter-spacing: .15em; color: var(--muted); padding: .5rem .8rem; border-bottom: 1px solid var(--border); text-align: right; font-weight: 400; text-transform: uppercase; }
+.htable th:first-child { text-align: left; }
+.htable td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); text-align: right; }
+.htable td:first-child { text-align: left; color: var(--muted2); }
+.htable tr:last-child td { border-bottom: none; }
+.htable tr:hover td { background: rgba(255,255,255,.01); }
+.htable tr.latest td { background: rgba(212,165,58,.04); }
+.htable tr.latest td:first-child { color: var(--gold); }
+
+.chg-pos { color: var(--green); }
+.chg-neg { color: var(--red); }
+.chg-neu { color: var(--muted2); }
+
+/* CHART — SVG based */
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+.chart-wrap { position: relative; }
+svg.cot-chart { width: 100%; height: 180px; display: block; }
+
+/* LOADING / EMPTY */
+.state-box {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--muted);
+}
+.state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: .3; }
+.state-title { font-family: 'Syne', sans-serif; font-size: 1rem; color: var(--muted2); margin-bottom: .5rem; }
+.state-sub { font-size: .72rem; line-height: 1.6; }
+
+/* LOADING SKELETON */
+.skeleton { background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* TOAST */
+.toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--red); color: #fff; padding: .7rem 1.2rem; border-radius: var(--r); font-size: .72rem; transform: translateY(80px); opacity: 0; transition: all .3s; z-index: 999; max-width: 320px; line-height: 1.5; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.ok { background: var(--green); }
+
+/* EXPLANATION BOX */
+.explain {
+  background: var(--gold-bg);
+  border: 1px solid rgba(212,165,58,.15);
+  border-radius: var(--r);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: .7rem;
+  line-height: 1.7;
+  color: var(--muted2);
+}
+.explain strong { color: var(--gold); font-weight: 500; }
+
+/* RESPONSIVE */
+@media(max-width:700px) {
+  .signals { grid-template-columns: 1fr; }
+  .history-grid { grid-template-columns: 1fr; }
+  .header { padding: 1rem; flex-wrap: wrap; gap: .8rem; }
+  .main { padding: 1rem; }
+  .prob-grid { grid-template-columns: 1fr; }
+  .pi-row { grid-template-columns: 1fr; }
+}
+
+/* PROBABILITY CALCULATOR */
+.prob-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+.prob-top {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--card2);
+}
+.prob-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.prob-inputs {
+  padding: 1.4rem 1.5rem;
+  border-right: 1px solid var(--border);
+}
+.prob-results {
+  padding: 1.4rem 1.5rem;
+}
+.prob-section-label {
+  font-size: .5rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .7rem;
+  font-weight: 500;
+}
+.pi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: .7rem;
+  margin-bottom: .8rem;
+}
+.pi-group { display: flex; flex-direction: column; gap: .3rem; }
+.pi-label { font-size: .5rem; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+.pi-input, .pi-select {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: .5rem .7rem;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  width: 100%;
+  transition: border-color .2s;
+}
+.pi-input:focus, .pi-select:focus { outline: none; border-color: var(--gold-dim, #7a6530); }
+.pi-select option { background: var(--card2); }
+.dir-toggle { display: flex; gap: 1px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.dir-btn {
+  flex: 1;
+  background: var(--card2);
+  border: none;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .65rem;
+  padding: .5rem .4rem;
+  cursor: pointer;
+  letter-spacing: .06em;
+  transition: all .2s;
+}
+.dir-btn.active { background: var(--gold-bg); color: var(--gold); }
+
+/* RESULT DISPLAY */
+.prob-score-wrap {
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+.prob-score-ring {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  margin: 0 auto .6rem;
+}
+.prob-score-ring svg { transform: rotate(-90deg); }
+.prob-score-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.prob-score-pct {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: .05em;
+  line-height: 1;
+}
+.prob-score-label { font-size: .48rem; letter-spacing: .15em; color: var(--muted); text-transform: uppercase; margin-top: .1rem; }
+.verdict {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: .1em;
+  margin-top: .3rem;
+}
+
+/* CRITERIA ROWS */
+.criteria-list { margin-bottom: 1rem; }
+.crit-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-bottom: .45rem;
+  font-size: .65rem;
+}
+.crit-icon { width: 16px; text-align: center; flex-shrink: 0; font-size: .75rem; }
+.crit-label { flex: 1; color: var(--muted2); }
+.crit-val { font-weight: 500; text-align: right; min-width: 45px; }
+.crit-val.pass { color: var(--green); }
+.crit-val.warn { color: var(--gold); }
+.crit-val.fail { color: var(--red); }
+
+/* STATS ROW */
+.trade-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: .8rem;
+}
+.ts-box { background: var(--card2); padding: .65rem .5rem; text-align: center; }
+.ts-label { font-size: .45rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: .25rem; }
+.ts-val { font-size: .9rem; font-weight: 500; }
+.ts-val.pos { color: var(--green); }
+.ts-val.neg { color: var(--red); }
+.ts-val.gold { color: var(--gold); }
+
+.rec-box {
+  margin-top: .8rem;
+  padding: .8rem 1rem;
+  border-radius: 4px;
+  font-size: .67rem;
+  line-height: 1.65;
+}
+.rec-box.take { background: var(--green-bg); border: 1px solid rgba(52,196,114,.2); color: #a0e8be; }
+.rec-box.caution { background: var(--gold-bg); border: 1px solid rgba(212,165,58,.2); color: #e8d090; }
+.rec-box.skip { background: var(--red-bg); border: 1px solid rgba(224,79,79,.2); color: #f0a0a0; }
+.rec-box strong { display: block; font-size: .72rem; letter-spacing: .08em; margin-bottom: .3rem; }
+
+/* CHART ANALYSIS */
+.analysis-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+.analysis-top {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--card2);
+}
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0;
+}
+@media(max-width:700px) { .analysis-grid { grid-template-columns: 1fr; } }
+.analysis-left {
+  padding: 1.4rem 1.5rem;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.analysis-right {
+  padding: 1.4rem 1.5rem;
+  min-height: 300px;
+}
+
+/* DROP ZONE */
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--r);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--card2);
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+.drop-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.drop-icon { font-size: 2rem; opacity: .4; margin-bottom: .6rem; }
+.drop-label { font-size: .7rem; color: var(--muted2); line-height: 1.6; }
+.drop-label strong { color: var(--gold); display: block; margin-bottom: .2rem; }
+
+/* PREVIEW */
+.chart-preview {
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  display: block;
+  max-height: 220px;
+  object-fit: contain;
+  background: #000;
+}
+
+/* ANALYSIS OUTPUT */
+.analysis-output {
+  min-height: 200px;
+}
+.analysis-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--muted);
+  text-align: center;
+  font-size: .68rem;
+  gap: .5rem;
+  font-style: italic;
+}
+.analysis-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  gap: .8rem;
+  color: var(--muted2);
+  font-size: .68rem;
+}
+.loading-bar {
+  width: 160px;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.loading-bar-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  animation: loadpulse 1.5s ease-in-out infinite;
+}
+@keyframes loadpulse {
+  0% { width: 0%; margin-left: 0; }
+  50% { width: 60%; margin-left: 20%; }
+  100% { width: 0%; margin-left: 100%; }
+}
+
+/* RESULT SECTIONS */
+.ai-section { margin-bottom: 1rem; }
+.ai-section-title {
+  font-size: .5rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .5rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.ai-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.ai-text {
+  font-size: .72rem;
+  line-height: 1.75;
+  color: var(--text);
+}
+.ai-text strong { color: var(--gold); font-weight: 500; }
+
+/* ACTION BOX */
+.action-verdict {
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  margin-top: .5rem;
+  font-size: .72rem;
+  line-height: 1.7;
+}
+.action-verdict.long  { background: var(--green-bg); border: 1px solid rgba(52,196,114,.25); }
+.action-verdict.short { background: var(--red-bg);   border: 1px solid rgba(224,79,79,.25); }
+.action-verdict.wait  { background: var(--gold-bg);  border: 1px solid rgba(212,165,58,.25); }
+.action-verdict .av-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: .1em;
+  margin-bottom: .3rem;
+}
+.action-verdict.long  .av-title { color: var(--green); }
+.action-verdict.short .av-title { color: var(--red); }
+.action-verdict.wait  .av-title { color: var(--gold); }
+
+.analyze-btn {
+  background: var(--gold);
+  color: var(--bg);
+  border: none;
+  padding: .65rem 1.2rem;
+  border-radius: var(--r);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: .95rem;
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: all .2s;
+  width: 100%;
+}
+.analyze-btn:hover { background: var(--gold2); }
+.analyze-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.ctx-select-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .6rem;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-wrap">
+    <div class="logo">COT Analyzer</div>
+    <div class="logo-sub">Mauricio Pierson · Coffee &amp; WTI · CFTC Data</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div class="last-updated" id="lastUpdated">Not yet fetched</div>
+    <button class="fetch-btn" id="fetchBtn" onclick="fetchAll()">
+      <span id="fetchIcon">⟳</span> Fetch Latest COT
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="explain">
+    <strong>COT Timeframe for Swing Traders:</strong> COT signals operate on a <strong>2–6 week forward horizon</strong> — perfectly aligned with swing trading. Use it as your <strong>Layer 1 directional filter</strong> only: COT tells you <em>which way</em> to trade, your <strong>Daily chart</strong> tells you <em>when to enter</em>, and your <strong>4H chart</strong> times the exact trigger. Never trade intraday or weekly noise against a strong COT signal. Data released <strong>every Friday 3:30pm ET</strong> (Tuesday positions, 3-day lag). Source: <strong>CFTC public API</strong> — free, official, no key required.
+  </div>
+
+  <!-- SIGNAL CARDS -->
+  <div class="section-head">Signal Dashboard</div>
+  <div class="signals" id="signalCards">
+    <div class="signal-card neutral" id="coffeeCard">
+      <div class="state-box"><div class="state-icon">☕</div><div class="state-title">Coffee (ICE)</div><div class="state-sub">Press "Fetch Latest COT" to load live CFTC data.</div></div>
+    </div>
+    <div class="signal-card neutral" id="wtiCard">
+      <div class="state-box"><div class="state-icon">🛢️</div><div class="state-title">WTI Crude Oil</div><div class="state-sub">Press "Fetch Latest COT" to load live CFTC data.</div></div>
+    </div>
+  </div>
+
+  <!-- NET POSITIONING CHART -->
+  <div class="section-head">Commercial Net Position — 26 Week History</div>
+  <div class="chart-card" id="coffeeChartCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
+      <div style="font-size:.6rem;letter-spacing:.1em;color:var(--coffee);text-transform:uppercase;font-weight:600;">☕ Coffee C — ICE</div>
+      <div style="font-size:.58rem;color:var(--muted);">Commercial net long/short · contracts</div>
+    </div>
+    <div class="chart-wrap"><svg class="cot-chart" id="coffeeChart"><text x="50%" y="50%" text-anchor="middle" fill="#3d4056" font-size="12" font-family="JetBrains Mono">Fetch data to render chart</text></svg></div>
+  </div>
+  <div class="chart-card" id="wtiChartCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
+      <div style="font-size:.6rem;letter-spacing:.1em;color:var(--wti);text-transform:uppercase;font-weight:600;">🛢️ WTI Crude Oil — NYMEX</div>
+      <div style="font-size:.58rem;color:var(--muted);">Commercial net long/short · contracts</div>
+    </div>
+    <div class="chart-wrap"><svg class="cot-chart" id="wtiChart"><text x="50%" y="50%" text-anchor="middle" fill="#3d4056" font-size="12" font-family="JetBrains Mono">Fetch data to render chart</text></svg></div>
+  </div>
+
+  <!-- HISTORY TABLES -->
+  <div class="section-head">Week-over-Week Positioning Detail</div>
+  <div class="history-grid">
+    <div class="history-card">
+      <div class="history-head">
+        <div class="history-title"><span style="color:var(--coffee);">☕</span> Coffee — Last 8 Weeks</div>
+      </div>
+      <div id="coffeeTable"><div class="state-box" style="padding:2rem;"><div class="state-sub">Awaiting data...</div></div></div>
+    </div>
+    <div class="history-card">
+      <div class="history-head">
+        <div class="history-title"><span style="color:var(--wti);">🛢️</span> WTI Crude — Last 8 Weeks</div>
+      </div>
+      <div id="wtiTable"><div class="state-box" style="padding:2rem;"><div class="state-sub">Awaiting data...</div></div></div>
+    </div>
+  </div>
+
+  <!-- TRADE PROBABILITY CALCULATOR -->
+  <div class="section-head" style="margin-top:1.5rem;">Trade Probability Calculator</div>
+  <div class="prob-card">
+    <div class="prob-top">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.08em;color:var(--text);">Will This Trade Be Profitable?</div>
+        <div style="font-size:.62rem;color:var(--muted2);margin-top:.2rem;line-height:1.6;">Enter your planned entry, target, and stop. The calculator scores your trade across 6 professional criteria and gives you an honest probability of success — factoring in R:R ratio, COT alignment, position sizing discipline, and statistical edge.</div>
+      </div>
+    </div>
+    <div class="prob-grid">
+      <div class="prob-inputs">
+        <div class="prob-section-label">Trade Setup</div>
+        <div class="pi-row">
+          <div class="pi-group">
+            <label class="pi-label">Instrument</label>
+            <select class="pi-select" id="pInst" onchange="calcProb()">
+              <option value="COFFEE">☕ Coffee (ICE)</option>
+              <option value="WTI">🛢️ WTI Crude Oil</option>
+            </select>
+          </div>
+          <div class="pi-group">
+            <label class="pi-label">Direction</label>
+            <div class="dir-toggle">
+              <button class="dir-btn active" id="btnLong" onclick="setDir('LONG')">▲ LONG</button>
+              <button class="dir-btn" id="btnShort" onclick="setDir('SHORT')">▼ SHORT</button>
+            </div>
+          </div>
+        </div>
+        <div class="pi-row">
+          <div class="pi-group">
+            <label class="pi-label">Entry Price</label>
+            <input type="number" class="pi-input" id="pEntry" placeholder="0.00" step="0.01" oninput="calcProb()">
+          </div>
+          <div class="pi-group">
+            <label class="pi-label">Target Price</label>
+            <input type="number" class="pi-input" id="pTarget" placeholder="0.00" step="0.01" oninput="calcProb()">
+          </div>
+          <div class="pi-group">
+            <label class="pi-label">Stop Loss</label>
+            <input type="number" class="pi-input" id="pStop" placeholder="0.00" step="0.01" oninput="calcProb()">
+          </div>
+        </div>
+        <div class="pi-row">
+          <div class="pi-group">
+            <label class="pi-label">Account Size ($)</label>
+            <input type="number" class="pi-input" id="pAccount" placeholder="10000" step="100" oninput="calcProb()">
+          </div>
+          <div class="pi-group">
+            <label class="pi-label">Risk per Trade (%)</label>
+            <input type="number" class="pi-input" id="pRiskPct" placeholder="1" step="0.1" min="0.1" max="5" oninput="calcProb()">
+          </div>
+          <div class="pi-group">
+            <label class="pi-label">Your Historical Win Rate (%)</label>
+            <input type="number" class="pi-input" id="pWinRate" placeholder="50" step="1" min="1" max="99" oninput="calcProb()">
+          </div>
+        </div>
+        <div class="prob-section-label" style="margin-top:1rem;">COT Alignment <span style="color:var(--muted);font-size:.5rem;">(auto-detected if data loaded)</span></div>
+        <div class="pi-row">
+          <div class="pi-group" style="grid-column:1/-1;">
+            <select class="pi-select" id="pCOT" onchange="calcProb()">
+              <option value="aligned">✅ COT aligned with my direction</option>
+              <option value="neutral">⚠️ COT neutral — no clear signal</option>
+              <option value="against">❌ COT against my direction</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="prob-results" id="probResults">
+        <div style="text-align:center;padding:3rem 1rem;">
+          <div style="font-size:2rem;opacity:.15;margin-bottom:.8rem;">📐</div>
+          <div style="font-size:.7rem;color:var(--muted);font-style:italic;">Fill in your trade details<br>to see probability analysis.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART ANALYSIS SECTION -->
+  <div class="section-head" style="margin-top:1.5rem;">AI Chart Analysis + COT Combined</div>
+  <div class="analysis-card">
+    <div class="analysis-top">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.08em;color:var(--text);">Upload Your Chart — Get a Trade Decision</div>
+      <div style="font-size:.62rem;color:var(--muted2);margin-top:.2rem;line-height:1.6;">
+        Upload a screenshot of your chart (any timeframe, any platform). Claude will analyze the price action, trend, key levels, and combine it with the current COT signal to tell you exactly what to do.
+      </div>
+    </div>
+    <div class="analysis-grid">
+      <div class="analysis-left">
+
+        <div>
+          <div class="prob-section-label">Chart Screenshot</div>
+          <!-- File input (hidden, triggered by button) -->
+          <input type="file" id="chartFile" accept="image/*" style="display:none;" onchange="handleFileInput(event)">
+
+          <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:1.4rem 1rem;text-align:center;background:var(--card2);">
+            <div id="dropIcon" style="font-size:1.6rem;margin-bottom:.5rem;opacity:.5;">📸</div>
+            <div id="dropLabel" style="font-size:.7rem;color:var(--muted2);line-height:1.9;margin-bottom:.8rem;">
+              <strong style="display:block;color:var(--gold);font-size:.75rem;margin-bottom:.3rem;">Two ways to add your chart:</strong>
+              <span style="color:var(--text);">① Click button below to browse file</span><br>
+              <span style="color:var(--text);">② Paste screenshot anywhere on page (Ctrl+V / Cmd+V)</span>
+            </div>
+            <button onclick="document.getElementById('chartFile').click()" style="background:var(--gold);color:var(--bg);border:none;padding:.5rem 1.2rem;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.08em;cursor:pointer;">
+              📂 Browse File
+            </button>
+          </div>
+          <img id="chartPreview" class="chart-preview" style="display:none;margin-top:.7rem;">
+        </div>
+
+        <div>
+          <div class="prob-section-label">Context for Analysis</div>
+          <div class="ctx-select-row">
+            <div class="pi-group">
+              <label class="pi-label">Instrument</label>
+              <select class="pi-select" id="aInst">
+                <option value="Coffee (ICE)">☕ Coffee (ICE)</option>
+                <option value="WTI Crude Oil">🛢️ WTI Crude Oil</option>
+              </select>
+            </div>
+            <div class="pi-group">
+              <label class="pi-label">Chart Timeframe</label>
+              <select class="pi-select" id="aTF">
+                <option value="5m">5 min</option>
+                <option value="15m">15 min</option>
+                <option value="30m" selected>30 min</option>
+                <option value="1H">1 Hour</option>
+                <option value="4H">4 Hour</option>
+                <option value="Daily">Daily</option>
+                <option value="Weekly">Weekly</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pi-group">
+          <label class="pi-label">Any additional context? (optional)</label>
+          <textarea class="pi-input" id="aContext" rows="2" placeholder="e.g. I'm looking for a long setup, recent crop report was bearish, price just broke support..." style="resize:none;font-size:.72rem;line-height:1.5;"></textarea>
+        </div>
+
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyzeChart()" disabled>
+          ⬆ Upload a chart to analyze
+        </button>
+
+      </div>
+      <div class="analysis-right">
+        <div class="analysis-output" id="analysisOutput">
+          <div class="analysis-placeholder">
+            <div style="font-size:2.5rem;opacity:.15;">🔍</div>
+            <div>Upload a chart screenshot and press Analyze.<br>Claude will read the price action and cross-reference<br>with live COT data to give you a trade decision.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- CFTC API CONFIG ----
+// Legacy Futures Only — best for commercials/non-commercials, most history
+// Market names from CFTC database (exact strings matter)
+const INSTRUMENTS = {
+  coffee: {
+    name: 'COFFEE C - ICE FUTURES U.S.',
+    label: 'Coffee C (ICE)',
+    color: '#c47840',
+    icon: '☕',
+    cls: 'coffee',
+    // fallback search terms if exact match fails
+    aliases: ['COFFEE C', 'COFFEE']
+  },
+  wti: {
+    name: 'CRUDE OIL, LIGHT SWEET - NEW YORK MERCANTILE EXCHANGE',
+    label: 'WTI Crude Oil',
+    color: '#e8a020',
+    icon: '🛢️',
+    cls: 'wti',
+    aliases: ['LIGHT SWEET CRUDE', 'CRUDE OIL']
+  }
+};
+
+// CFTC Socrata API - Legacy Futures Only - completely free, no auth needed
+const BASE = 'https://publicreporting.cftc.gov/resource/6dca-aqww.json';
+
+let data = { coffee: [], wti: [] };
+
+async function fetchCOT(marketName) {
+  // Fetch last 26 weeks of data for given market
+  const encoded = encodeURIComponent(marketName);
+  const url = `${BASE}?$where=market_and_exchange_names='${marketName}'&$order=report_date_as_yyyy_mm_dd DESC&$limit=26`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  return json;
+}
+
+async function fetchAll() {
+  const btn = document.getElementById('fetchBtn');
+  const icon = document.getElementById('fetchIcon');
+  btn.disabled = true;
+  icon.textContent = '◌';
+  icon.className = 'spin';
+
+  try {
+    // Fetch both instruments in parallel
+    const [coffeeRaw, wtiRaw] = await Promise.all([
+      fetchCOT(INSTRUMENTS.coffee.name),
+      fetchCOT(INSTRUMENTS.wti.name)
+    ]);
+
+    if (coffeeRaw.length === 0 || wtiRaw.length === 0) {
+      // Try alternate endpoint with broader search if exact match fails
+      showToast('Trying alternate market names...', false);
+      const [c2, w2] = await Promise.all([
+        fetch(`${BASE}?$where=market_and_exchange_names LIKE '%25COFFEE C%25'&$order=report_date_as_yyyy_mm_dd DESC&$limit=26`).then(r=>r.json()),
+        fetch(`${BASE}?$where=market_and_exchange_names LIKE '%25LIGHT SWEET%25'&$order=report_date_as_yyyy_mm_dd DESC&$limit=26`).then(r=>r.json())
+      ]);
+      data.coffee = c2.length ? c2 : coffeeRaw;
+      data.wti = w2.length ? w2 : wtiRaw;
+    } else {
+      data.coffee = coffeeRaw;
+      data.wti = wtiRaw;
+    }
+
+    if (data.coffee.length === 0 && data.wti.length === 0) {
+      throw new Error('No data returned from CFTC API. The API may be temporarily unavailable.');
+    }
+
+    renderAll();
+    const now = new Date().toLocaleString('en-US', { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    document.getElementById('lastUpdated').textContent = 'Updated ' + now;
+    showToast('COT data loaded ✓', true);
+
+  } catch(e) {
+    showToast('Error: ' + e.message + '. The CFTC API may be down — try again in a few minutes.', false);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '⟳';
+    icon.className = '';
+  }
+}
+
+// ---- PARSE ----
+function parseRow(row) {
+  const n = k => parseFloat(row[k]) || 0;
+  return {
+    date: row.report_date_as_yyyy_mm_dd ? row.report_date_as_yyyy_mm_dd.split('T')[0] : '—',
+    openInterest: n('open_interest_all'),
+    commLong: n('comm_positions_long_all'),
+    commShort: n('comm_positions_short_all'),
+    commNet: n('comm_positions_long_all') - n('comm_positions_short_all'),
+    specLong: n('noncomm_positions_long_all'),
+    specShort: n('noncomm_positions_short_all'),
+    specNet: n('noncomm_positions_long_all') - n('noncomm_positions_short_all'),
+    // spreading
+    spreadLong: n('noncomm_postions_long_all') || n('noncomm_positions_long_all'),
+  };
+}
+
+// ---- SIGNAL ENGINE ----
+function calcSignal(rows) {
+  if (!rows || rows.length < 2) return { signal: 'NEUTRAL', score: 0, strength: 0 };
+
+  const latest = rows[0];
+  const prev = rows[1];
+  let score = 0;
+
+  // 1. Commercial net direction (most important — weight 40%)
+  if (latest.commNet > 0) score += 40;
+  else if (latest.commNet < 0) score -= 40;
+
+  // 2. Commercial net change WoW (weight 20%)
+  const commChange = latest.commNet - prev.commNet;
+  if (commChange > 0) score += 20;
+  else if (commChange < 0) score -= 20;
+
+  // 3. Spec positioning extremes (contrarian — weight 20%)
+  // If specs are very net long, that's bearish (reversal risk)
+  const specPct = rows.length >= 3 ? latest.specNet / (Math.max(...rows.map(r => Math.abs(r.specNet))) || 1) : 0;
+  if (specPct > 0.7) score -= 20;   // specs extreme long = bearish signal
+  else if (specPct < -0.7) score += 20; // specs extreme short = bullish signal
+
+  // 4. WoW spec change direction (weight 20%)
+  const specChange = latest.specNet - prev.specNet;
+  if (specChange > 0) score += 10;  // specs adding longs = bullish momentum
+  else if (specChange < 0) score -= 10;
+
+  // Map to signal
+  const strength = Math.min(Math.abs(score), 100);
+  let signal = 'NEUTRAL';
+  if (score >= 35) signal = 'BULLISH';
+  else if (score <= -35) signal = 'BEARISH';
+
+  return { signal, score, strength };
+}
+
+// ---- RENDER ALL ----
+function renderAll() {
+  const coffeeRows = data.coffee.map(parseRow);
+  const wtiRows = data.wti.map(parseRow);
+
+  renderSignalCard('coffeeCard', coffeeRows, INSTRUMENTS.coffee);
+  renderSignalCard('wtiCard', wtiRows, INSTRUMENTS.wti);
+
+  renderChart('coffeeChart', coffeeRows, INSTRUMENTS.coffee.color);
+  renderChart('wtiChart', wtiRows, INSTRUMENTS.wti.color);
+
+  renderTable('coffeeTable', coffeeRows, 8);
+  renderTable('wtiTable', wtiRows, 8);
+}
+
+// ---- SIGNAL CARD ----
+function renderSignalCard(id, rows, inst) {
+  const card = document.getElementById(id);
+  if (!rows || rows.length === 0) {
+    card.innerHTML = `<div class="state-box"><div class="state-icon">${inst.icon}</div><div class="state-title">No data</div><div class="state-sub">Could not load ${inst.label} data from CFTC.</div></div>`;
+    return;
+  }
+
+  const { signal, score, strength } = calcSignal(rows);
+  const latest = rows[0];
+  const prev = rows[1] || latest;
+
+  const commChange = latest.commNet - prev.commNet;
+  const specChange = latest.specNet - prev.specNet;
+
+  const cls = signal === 'BULLISH' ? 'bull' : signal === 'BEARISH' ? 'bear' : 'neutral';
+  card.className = `signal-card ${cls}`;
+
+  // Positioning bars — normalize by open interest
+  const oi = latest.openInterest || 1;
+  const commLongPct = Math.round(latest.commLong / oi * 100);
+  const commShortPct = Math.round(latest.commShort / oi * 100);
+  const specLongPct = Math.round(latest.specLong / oi * 100);
+  const specShortPct = Math.round(latest.specShort / oi * 100);
+
+  const fmtN = n => (n >= 0 ? '+' : '') + n.toLocaleString();
+  const chgCls = n => n > 0 ? 'chg-pos' : n < 0 ? 'chg-neg' : 'chg-neu';
+  const strengthLabel = strength >= 70 ? 'Strong' : strength >= 40 ? 'Moderate' : 'Weak';
+
+  card.innerHTML = `
+    <div class="inst-tag ${inst.cls}">${inst.icon} ${inst.label}</div>
+    <div class="signal-label">Primary Signal</div>
+    <div class="signal-value ${cls}">${signal}</div>
+    <div class="signal-score">${strengthLabel} · Score: <span>${score > 0 ? '+' : ''}${score}</span> / 100</div>
+
+    <div class="meter-wrap">
+      <div class="meter-label"><span>Signal Strength</span><span>${strength}%</span></div>
+      <div class="meter-track">
+        <div class="meter-fill ${cls}-fill" style="width:${strength}%"></div>
+      </div>
+    </div>
+
+    <div style="font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;">Positioning · as of ${latest.date}</div>
+
+    <div class="pos-section">
+      <div class="pos-row">
+        <span class="pos-name">Commercials</span>
+        <div class="pos-bar-wrap">
+          <div class="pos-long" style="width:${Math.min(commLongPct,50)}%"></div>
+          <div class="pos-short" style="width:${Math.min(commShortPct,50)}%"></div>
+        </div>
+        <span class="pos-net ${latest.commNet >= 0 ? 'pos' : 'neg'}">${fmtN(latest.commNet)}</span>
+      </div>
+      <div class="pos-row">
+        <span class="pos-name">Large Specs</span>
+        <div class="pos-bar-wrap">
+          <div class="pos-long" style="width:${Math.min(specLongPct,50)}%"></div>
+          <div class="pos-short" style="width:${Math.min(specShortPct,50)}%"></div>
+        </div>
+        <span class="pos-net ${latest.specNet >= 0 ? 'pos' : 'neg'}">${fmtN(latest.specNet)}</span>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:.7rem;">
+        <div style="font-size:.5rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem;">Comm WoW Chg</div>
+        <div style="font-size:.95rem;font-weight:500;" class="${chgCls(commChange)}">${fmtN(Math.round(commChange))}</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:.7rem;">
+        <div style="font-size:.5rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem;">Spec WoW Chg</div>
+        <div style="font-size:.95rem;font-weight:500;" class="${chgCls(specChange)}">${fmtN(Math.round(specChange))}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:.8rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:.7rem;">
+        <div style="font-size:.48rem;letter-spacing:.13em;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem;">Signal Horizon</div>
+        <div style="font-size:.88rem;font-weight:500;color:var(--gold);">2–6 Weeks</div>
+        <div style="font-size:.5rem;color:var(--muted);margin-top:.15rem;">forward-looking</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:.7rem;">
+        <div style="font-size:.48rem;letter-spacing:.13em;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem;">Swing Hold</div>
+        <div style="font-size:.88rem;font-weight:500;color:${signal === 'NEUTRAL' ? 'var(--muted2)' : signal === 'BULLISH' ? 'var(--green)' : 'var(--red)'};">${getHoldPeriod(strength, signal)}</div>
+        <div style="font-size:.5rem;color:var(--muted);margin-top:.15rem;">target duration</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:.7rem;">
+        <div style="font-size:.48rem;letter-spacing:.13em;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem;">Time Entry On</div>
+        <div style="font-size:.88rem;font-weight:500;color:var(--blue);">Daily / 4H</div>
+        <div style="font-size:.5rem;color:var(--muted);margin-top:.15rem;">chart timeframe</div>
+      </div>
+    </div>
+
+    <div style="margin-top:.7rem;background:rgba(${signal==='BULLISH'?'52,196,114':signal==='BEARISH'?'224,79,79':'100,100,120'},.06);border:1px solid rgba(${signal==='BULLISH'?'52,196,114':signal==='BEARISH'?'224,79,79':'100,100,120'},.18);border-radius:4px;padding:.85rem;">
+      <div style="font-size:.48rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:.4rem;">⚡ Trader Action — Swing Setup</div>
+      <div style="font-size:.68rem;color:var(--text);line-height:1.7;">${getTraderAction(signal, strength, inst)}</div>
+    </div>
+
+    <div style="margin-top:.6rem;font-size:.6rem;color:var(--muted);line-height:1.6;font-style:italic;">
+      ${getSignalNote(signal, latest, commChange, specChange, inst)}
+    </div>
+  `;
+}
+
+function getSignalNote(signal, latest, commChange, specChange, inst) {
+  if (signal === 'BULLISH') {
+    return `Commercials net ${latest.commNet > 0 ? 'long' : 'increasing'} — institutional smart money showing bullish bias on ${inst.label}. ${commChange > 0 ? 'Adding to longs this week reinforces the signal.' : 'Watch for confirmation next week.'}`;
+  } else if (signal === 'BEARISH') {
+    return `Commercials net short and ${commChange < 0 ? 'increasing shorts' : 'holding position'} — hedgers see downside risk in ${inst.label}. ${specChange > 0 ? 'Specs still buying into weakness — potential squeeze ahead.' : 'Spec exodus adds pressure.'}`;
+  }
+  return `Mixed signals — commercials and specs not showing clear directional conviction in ${inst.label}. Wait for a cleaner setup before committing.`;
+}
+
+function getHoldPeriod(strength, signal) {
+  if (signal === 'NEUTRAL') return 'Stay Out';
+  if (strength >= 70) return '3–6 weeks';
+  if (strength >= 40) return '1–3 weeks';
+  return '5–10 days';
+}
+
+function getTraderAction(signal, strength, inst) {
+  if (signal === 'NEUTRAL') {
+    return `<b style="color:var(--muted2);">NO TRADE.</b> COT shows no clear institutional conviction on ${inst.label}. Stay flat and wait for commercials to commit to a direction. Check again next Friday after the new report drops.`;
+  }
+  if (signal === 'BULLISH') {
+    const aggr = strength >= 70
+      ? `Strong signal — look for pullbacks to the <b style="color:var(--text);">20-day MA or key support</b> on the daily chart and buy the dip. Target minimum <b style="color:var(--text);">2.5R</b>. Hold 3–6 weeks unless price breaks structure.`
+      : `Moderate signal — <b style="color:var(--text);">wait for a daily chart breakout confirmation</b> before entering long. Don't chase — let price come to you. Tighten target to 1.5–2R given mixed conviction.`;
+    return `<b style="color:var(--green);">LONG BIAS ONLY</b> on ${inst.label} for the next 2–6 weeks. Do not short this instrument while COT reads bullish. ${aggr} Check 4H chart for precise entry timing.`;
+  }
+  if (signal === 'BEARISH') {
+    const aggr = strength >= 70
+      ? `Strong signal — <b style="color:var(--text);">sell rallies</b> on the daily chart. Any bounce into resistance or the 20-day MA is a short entry. Target minimum <b style="color:var(--text);">2.5R</b>. Hold 3–6 weeks unless price reclaims structure.`
+      : `Moderate signal — <b style="color:var(--text);">wait for a daily chart breakdown or failed rally</b> before entering short. Confirm with volume. Tighten target to 1.5–2R given mixed conviction.`;
+    return `<b style="color:var(--red);">SHORT BIAS ONLY</b> on ${inst.label} for the next 2–6 weeks. Do not buy dips while COT reads bearish — you'd be fighting institutional flow. ${aggr} Check 4H chart for precise entry timing.`;
+  }
+  return '';
+}
+
+// ---- SVG CHART ----
+function renderChart(id, rows, color) {
+  const svg = document.getElementById(id);
+  if (!rows || rows.length < 2) return;
+
+  const rev = [...rows].reverse(); // chronological
+  const nets = rev.map(r => r.commNet);
+  const dates = rev.map(r => r.date);
+
+  const W = svg.parentElement.offsetWidth || 700;
+  const H = 180;
+  const padL = 70, padR = 20, padT = 20, padB = 30;
+  const w = W - padL - padR;
+  const h = H - padT - padB;
+
+  const minV = Math.min(...nets, 0);
+  const maxV = Math.max(...nets, 0);
+  const range = maxV - minV || 1;
+
+  const tx = i => padL + (i / (nets.length - 1)) * w;
+  const ty = v => padT + h - ((v - minV) / range) * h;
+  const zeroY = ty(0);
+
+  let pathD = '';
+  nets.forEach((v, i) => {
+    pathD += (i === 0 ? 'M' : 'L') + tx(i).toFixed(1) + ',' + ty(v).toFixed(1) + ' ';
+  });
+
+  // Fill area
+  const fillD = pathD + `L${tx(nets.length-1).toFixed(1)},${zeroY.toFixed(1)} L${padL},${zeroY.toFixed(1)} Z`;
+
+  // Date labels — every 4 weeks
+  const dateLabels = dates.filter((_, i) => i % 4 === 0 || i === dates.length - 1).map((d, _, arr) => {
+    const idx = dates.indexOf(d);
+    return `<text x="${tx(idx).toFixed(1)}" y="${H - 5}" text-anchor="middle" fill="#3d4056" font-size="9" font-family="JetBrains Mono">${d.slice(5)}</text>`;
+  }).join('');
+
+  // Y axis labels
+  const yLabels = [minV, 0, maxV].map(v => {
+    const y = ty(v);
+    const fmt = v >= 0 ? '+' + Math.round(v/1000) + 'k' : Math.round(v/1000) + 'k';
+    return `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" fill="${v === 0 ? '#3d4056' : v > 0 ? '#34c472' : '#e04f4f'}" font-size="9" font-family="JetBrains Mono">${fmt}</text>`;
+  }).join('');
+
+  // Dots on data points
+  const dots = nets.map((v, i) => {
+    const isLatest = i === nets.length - 1;
+    const c = v >= 0 ? '#34c472' : '#e04f4f';
+    return isLatest ? `<circle cx="${tx(i)}" cy="${ty(v)}" r="4" fill="${c}" stroke="${color}" stroke-width="1.5"/>` : '';
+  }).join('');
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W);
+  svg.innerHTML = `
+    <!-- Zero line -->
+    <line x1="${padL}" y1="${zeroY}" x2="${W - padR}" y2="${zeroY}" stroke="#1a1b24" stroke-width="1" stroke-dasharray="4,4"/>
+    <!-- Fill -->
+    <path d="${fillD}" fill="${color}" opacity="0.08"/>
+    <!-- Line -->
+    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
+    <!-- Dots -->
+    ${dots}
+    <!-- Labels -->
+    ${yLabels}
+    ${dateLabels}
+    <!-- Latest value label -->
+    <text x="${tx(nets.length-1)}" y="${ty(nets[nets.length-1]) - 10}" text-anchor="middle" fill="${nets[nets.length-1] >= 0 ? '#34c472' : '#e04f4f'}" font-size="10" font-family="JetBrains Mono" font-weight="500">${nets[nets.length-1] >= 0 ? '+' : ''}${Math.round(nets[nets.length-1]/1000)}k</text>
+  `;
+}
+
+// ---- TABLE ----
+function renderTable(id, rows, limit) {
+  const el = document.getElementById(id);
+  if (!rows || rows.length === 0) {
+    el.innerHTML = '<div class="state-box" style="padding:1.5rem;"><div class="state-sub">No data.</div></div>';
+    return;
+  }
+
+  const show = rows.slice(0, limit);
+  const fmtN = n => (n >= 0 ? '+' : '') + Math.round(n).toLocaleString();
+  const chgCls = n => n > 0 ? 'chg-pos' : n < 0 ? 'chg-neg' : 'chg-neu';
+
+  const rows_html = show.map((r, i) => {
+    const prev = rows[i + 1];
+    const commChg = prev ? r.commNet - prev.commNet : null;
+    const specChg = prev ? r.specNet - prev.specNet : null;
+    return `<tr class="${i === 0 ? 'latest' : ''}">
+      <td>${r.date}</td>
+      <td class="${r.commNet >= 0 ? 'chg-pos' : 'chg-neg'}">${fmtN(r.commNet)}</td>
+      <td class="${commChg === null ? '' : chgCls(commChg)}">${commChg === null ? '—' : fmtN(Math.round(commChg))}</td>
+      <td class="${r.specNet >= 0 ? 'chg-pos' : 'chg-neg'}">${fmtN(r.specNet)}</td>
+      <td class="${specChg === null ? '' : chgCls(specChg)}">${specChg === null ? '—' : fmtN(Math.round(specChg))}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <table class="htable">
+      <thead><tr>
+        <th>Date</th>
+        <th>Comm Net</th>
+        <th>WoW Δ</th>
+        <th>Spec Net</th>
+        <th>WoW Δ</th>
+      </tr></thead>
+      <tbody>${rows_html}</tbody>
+    </table>`;
+}
+
+// ---- TOAST ----
+function showToast(msg, ok = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (ok ? ' ok' : '');
+  setTimeout(() => t.classList.remove('show'), ok ? 2500 : 5000);
+}
+
+
+// ---- INIT ----
+window.addEventListener('load', () => { fetchAll(); });
+window.addEventListener('resize', () => {
+  if (data.coffee.length) renderChart('coffeeChart', data.coffee.map(parseRow), INSTRUMENTS.coffee.color);
+  if (data.wti.length) renderChart('wtiChart', data.wti.map(parseRow), INSTRUMENTS.wti.color);
+});
+
+// ---- AUTO-SYNC COT TO CALCULATOR ----
+function syncCOTToCalc() {
+  const inst = document.getElementById('pInst') ? document.getElementById('pInst').value : null;
+  if (!inst) return;
+  const dir = currentDir;
+  const rows = inst === 'COFFEE' ? data.coffee.map(parseRow) : data.wti.map(parseRow);
+  if (!rows.length) return;
+  const { signal } = calcSignal(rows);
+  const select = document.getElementById('pCOT');
+  if (!select) return;
+  if (signal === 'BULLISH') select.value = dir === 'LONG' ? 'aligned' : 'against';
+  else if (signal === 'BEARISH') select.value = dir === 'SHORT' ? 'aligned' : 'against';
+  else select.value = 'neutral';
+  calcProb();
+}
+
+// ---- PROBABILITY CALCULATOR ----
+let currentDir = 'LONG';
+
+function setDir(d) {
+  currentDir = d;
+  document.getElementById('btnLong').classList.toggle('active', d === 'LONG');
+  document.getElementById('btnShort').classList.toggle('active', d === 'SHORT');
+  syncCOTToCalc();
+}
+
+function calcProb() {
+  const entry   = parseFloat(document.getElementById('pEntry').value);
+  const target  = parseFloat(document.getElementById('pTarget').value);
+  const stop    = parseFloat(document.getElementById('pStop').value);
+  const account = parseFloat(document.getElementById('pAccount').value) || 10000;
+  const riskPct = parseFloat(document.getElementById('pRiskPct').value) || 1;
+  const winRate = parseFloat(document.getElementById('pWinRate').value) || 50;
+  const cot     = document.getElementById('pCOT').value;
+  const dir     = currentDir;
+  const el      = document.getElementById('probResults');
+  if (!entry || !target || !stop) return;
+
+  // Core calcs
+  const riskDist   = Math.abs(entry - stop);
+  const profitDist = Math.abs(target - entry);
+  const rr = profitDist / (riskDist || 1);
+  const dirOK = dir === 'LONG' ? (target > entry && stop < entry) : (target < entry && stop > entry);
+  const dollarRisk   = (account * riskPct) / 100;
+  const dollarProfit = dollarRisk * rr;
+  const wr = winRate / 100;
+  const kelly = wr - (1 - wr) / rr;
+  const ev = (wr * dollarProfit) - ((1 - wr) * dollarRisk);
+
+  // Scoring criteria
+  const criteria = [];
+
+  // 1. R:R (weight 30)
+  let rrScore, rrStatus, rrNote;
+  if      (rr >= 3.0) { rrScore=100; rrStatus='pass'; rrNote=rr.toFixed(2)+'R — Excellent'; }
+  else if (rr >= 2.5) { rrScore=85;  rrStatus='pass'; rrNote=rr.toFixed(2)+'R — Meets plan'; }
+  else if (rr >= 2.0) { rrScore=60;  rrStatus='warn'; rrNote=rr.toFixed(2)+'R — Below target'; }
+  else if (rr >= 1.5) { rrScore=30;  rrStatus='warn'; rrNote=rr.toFixed(2)+'R — Marginal'; }
+  else                { rrScore=0;   rrStatus='fail'; rrNote=rr.toFixed(2)+'R — Too low'; }
+  criteria.push({ icon:'📐', label:'Risk / Reward Ratio', score:rrScore, status:rrStatus, val:rrNote, weight:30 });
+
+  // 2. COT Alignment (weight 25)
+  let cotScore, cotStatus, cotNote;
+  if      (cot==='aligned') { cotScore=100; cotStatus='pass'; cotNote='Confirmed by COT'; }
+  else if (cot==='neutral') { cotScore=45;  cotStatus='warn'; cotNote='No COT tailwind'; }
+  else                      { cotScore=0;   cotStatus='fail'; cotNote='Fighting COT flow'; }
+  criteria.push({ icon:'📊', label:'COT Signal Alignment', score:cotScore, status:cotStatus, val:cotNote, weight:25 });
+
+  // 3. Price Logic (weight 15)
+  let dirScore, dirStatus, dirNote;
+  if (!dirOK) { dirScore=0;   dirStatus='fail'; dirNote='Prices invalid'; }
+  else        { dirScore=100; dirStatus='pass'; dirNote='Prices logical'; }
+  criteria.push({ icon:'🧭', label:'Price Logic Check', score:dirScore, status:dirStatus, val:dirNote, weight:15 });
+
+  // 4. Position Sizing (weight 15)
+  let sizeScore, sizeStatus, sizeNote;
+  if      (riskPct <= 1) { sizeScore=100; sizeStatus='pass'; sizeNote=riskPct+'% — Conservative'; }
+  else if (riskPct <= 2) { sizeScore=75;  sizeStatus='pass'; sizeNote=riskPct+'% — Acceptable'; }
+  else if (riskPct <= 3) { sizeScore=35;  sizeStatus='warn'; sizeNote=riskPct+'% — High risk'; }
+  else                   { sizeScore=0;   sizeStatus='fail'; sizeNote=riskPct+'% — Dangerous'; }
+  criteria.push({ icon:'💰', label:'Position Size Discipline', score:sizeScore, status:sizeStatus, val:sizeNote, weight:15 });
+
+  // 5. Statistical Edge / Kelly (weight 15)
+  let edgeScore, edgeStatus, edgeNote;
+  if      (kelly > 0.15) { edgeScore=100; edgeStatus='pass'; edgeNote='Strong edge'; }
+  else if (kelly > 0.05) { edgeScore=70;  edgeStatus='pass'; edgeNote='Positive edge'; }
+  else if (kelly > 0)    { edgeScore=40;  edgeStatus='warn'; edgeNote='Thin edge'; }
+  else                   { edgeScore=0;   edgeStatus='fail'; edgeNote='Negative EV'; }
+  criteria.push({ icon:'📈', label:'Statistical Edge (Kelly)', score:edgeScore, status:edgeStatus, val:edgeNote, weight:15 });
+
+  // Composite probability
+  const totalWeight = criteria.reduce((a,c) => a + c.weight, 0);
+  const prob = Math.round(criteria.reduce((a,c) => a + c.score * c.weight, 0) / totalWeight);
+
+  // Verdict
+  let verdict, verdictCls, recCls, recMsg;
+  if (!dirOK) {
+    verdict='INVALID SETUP'; verdictCls='#e04f4f'; recCls='skip';
+    recMsg='<strong>✗ Fix Your Prices</strong>Target and stop are on the wrong sides of your entry for a '+dir+' trade. '+(dir==='LONG'?'Target must be above entry, stop below.':'Target must be below entry, stop above.');
+  } else if (prob >= 72) {
+    verdict='HIGH PROBABILITY'; verdictCls='#34c472'; recCls='take';
+    recMsg='<strong>✓ Take This Trade</strong>All key factors align. R:R meets your plan, COT '+(cot==='aligned'?'confirms your direction':'is not blocking you')+', and sizing is disciplined. Risk $'+dollarRisk.toFixed(0)+' to make $'+dollarProfit.toFixed(0)+'. Execute without hesitation.';
+  } else if (prob >= 50) {
+    verdict='MODERATE — USE CAUTION'; verdictCls='#d4a53a'; recCls='caution';
+    recMsg='<strong>⚠ Proceed With Caution</strong>'+(rr<2.5?'R:R is below your 2.5R minimum — widen target or tighten stop. ':'')+( cot==='against'?'You are trading against COT — biggest risk factor here. Consider waiting. ':cot==='neutral'?'No COT tailwind. Trade stands alone without institutional backing. ':'')+( riskPct>2?'Reduce position size to protect your account. ':'')+' Risk $'+dollarRisk.toFixed(0)+' to make $'+dollarProfit.toFixed(0)+'.';
+  } else {
+    verdict='LOW PROBABILITY — SKIP'; verdictCls='#e04f4f'; recCls='skip';
+    recMsg='<strong>✗ Skip This Trade</strong>'+(cot==='against'?'Fighting COT institutional flow is the primary issue — the market will work against you. ':'')+( rr<1.5?'R:R is far below minimum. You risk more than you gain. ':'')+( riskPct>3?'Position size is dangerously large for your account. ':'')+' Discipline means skipping bad setups as much as taking good ones.';
+  }
+
+  // Donut ring
+  const R2=46, CX=55, CY=55, circ=2*Math.PI*R2;
+  const filled = Math.max(0, Math.min(1, prob/100)) * circ;
+
+  el.innerHTML = `
+    <div class="prob-score-wrap">
+      <div class="prob-score-ring">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle cx="${CX}" cy="${CY}" r="${R2}" fill="none" stroke="var(--border2)" stroke-width="9"/>
+          <circle cx="${CX}" cy="${CY}" r="${R2}" fill="none" stroke="${verdictCls}" stroke-width="9"
+            stroke-dasharray="${filled.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"
+            style="transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dasharray 1s ease;"/>
+        </svg>
+        <div class="prob-score-num">
+          <span class="prob-score-pct" style="color:${verdictCls};">${prob}%</span>
+          <span class="prob-score-label">probability</span>
+        </div>
+      </div>
+      <div class="verdict" style="color:${verdictCls};">${verdict}</div>
+    </div>
+
+    <div class="criteria-list">
+      ${criteria.map(c => `
+        <div class="crit-row">
+          <span class="crit-icon">${c.icon}</span>
+          <span class="crit-label">${c.label} <span style="color:var(--muted);font-size:.5rem;">(${c.weight}%)</span></span>
+          <span class="crit-val ${c.status}">${c.val}</span>
+        </div>`).join('')}
+    </div>
+
+    <div class="trade-stats">
+      <div class="ts-box"><div class="ts-label">R:R Ratio</div><div class="ts-val ${rr>=2.5?'pos':rr>=1.5?'gold':'neg'}">${rr.toFixed(2)}R</div></div>
+      <div class="ts-box"><div class="ts-label">Expected Value</div><div class="ts-val ${ev>=0?'pos':'neg'}">${ev>=0?'+':''}$${Math.round(ev)}</div></div>
+      <div class="ts-box"><div class="ts-label">$ at Risk</div><div class="ts-val neg">-$${dollarRisk.toFixed(0)}</div></div>
+      <div class="ts-box"><div class="ts-label">$ Profit Target</div><div class="ts-val pos">+$${dollarProfit.toFixed(0)}</div></div>
+      <div class="ts-box"><div class="ts-label">Kelly %</div><div class="ts-val ${kelly>0?'pos':'neg'}">${(kelly*100).toFixed(1)}%</div></div>
+      <div class="ts-box"><div class="ts-label">Break-even WR</div><div class="ts-val gold">${Math.round(1/(1+rr)*100)}%</div></div>
+    </div>
+
+    <div class="rec-box ${recCls}">${recMsg}</div>
+  `;
+}
+
+// Auto-sync COT when instrument select changes
+window.addEventListener('DOMContentLoaded', () => {
+  const instEl = document.getElementById('pInst');
+  if (instEl) instEl.addEventListener('change', syncCOTToCalc);
+  initPasteZone();
+});
+
+
+// ---- CHART ANALYSIS ----
+let chartImageBase64 = null;
+
+function initPasteZone() {
+  // Global paste listener
+  document.addEventListener('paste', function(e) {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault();
+        loadImageData(items[i].getAsFile());
+        return;
+      }
+    }
+  });
+}
+
+function handleFileInput(event) {
+  const file = event.target.files[0];
+  if (file) loadImageData(file);
+}
+
+function loadImageData(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const result = e.target.result;
+    const preview = document.getElementById('chartPreview');
+    preview.src = result;
+    preview.style.display = 'block';
+    document.getElementById('dropIcon').textContent = '✅';
+    document.getElementById('dropLabel').innerHTML =
+      '<strong style="display:block;color:var(--green);font-size:.75rem;margin-bottom:.2rem;">Chart loaded!</strong>' +
+      '<span style="font-size:.62rem;color:var(--muted);">Hit the Analyze button below</span>';
+    const mediaType = result.split(';')[0].split(':')[1];
+    chartImageBase64 = { data: result.split(',')[1], media_type: mediaType };
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = false;
+    btn.textContent = '⚡ Analyze Chart + COT';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeChart() {
+  if (!chartImageBase64) return;
+
+  const inst = document.getElementById('aInst').value;
+  const tf   = document.getElementById('aTF').value;
+  const ctx  = document.getElementById('aContext').value;
+  const out  = document.getElementById('analysisOutput');
+  const btn  = document.getElementById('analyzeBtn');
+
+  // Get current COT signal for this instrument
+  const cotKey = inst.includes('Coffee') ? 'coffee' : 'wti';
+  const cotRows = data[cotKey].map(parseRow);
+  let cotSummary = 'No COT data loaded yet.';
+  if (cotRows.length >= 2) {
+    const { signal, score, strength } = calcSignal(cotRows);
+    const latest = cotRows[0];
+    const prev   = cotRows[1];
+    const commChg = latest.commNet - prev.commNet;
+    cotSummary = `COT Signal: ${signal} (Score: ${score > 0 ? '+' : ''}${score}/100, Strength: ${strength}%).
+Commercial net position: ${latest.commNet > 0 ? '+' : ''}${Math.round(latest.commNet).toLocaleString()} contracts (WoW change: ${commChg > 0 ? '+' : ''}${Math.round(commChg).toLocaleString()}).
+Large Spec net: ${latest.specNet > 0 ? '+' : ''}${Math.round(latest.specNet).toLocaleString()} contracts.
+Data as of: ${latest.date}.
+COT Swing Trade Horizon: 2–6 weeks forward.`;
+  }
+
+  // Show loading
+  btn.disabled = true;
+  btn.textContent = '⟳ Analyzing...';
+  out.innerHTML = `
+    <div class="analysis-loading">
+      <div style="font-size:1.5rem;opacity:.4;">🔍</div>
+      <div>Reading chart + COT data...</div>
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+      <div style="font-size:.6rem;color:var(--muted);">Claude is analyzing price action, trend, key levels,<br>and cross-referencing with COT positioning.</div>
+    </div>`;
+
+  const systemPrompt = `You are an expert commodities trader and technical analyst specializing in ${inst}. 
+You analyze charts with surgical precision and give clear, actionable swing trade decisions.
+You always structure your response in exactly this JSON format:
+{
+  "trend": "string — overall trend direction and strength on this timeframe",
+  "keyLevels": "string — key support/resistance levels visible on the chart",
+  "priceAction": "string — candlestick patterns, momentum, volume observations",
+  "cotAlignment": "string — how the COT data aligns or conflicts with what you see on chart",
+  "timeframeNote": "string — what this timeframe tells us vs the COT swing horizon",
+  "decision": "LONG" | "SHORT" | "WAIT",
+  "decisionReason": "string — 2-3 sentences explaining the decision clearly",
+  "entry": "string — suggested entry zone or condition",
+  "target": "string — suggested target level",
+  "stop": "string — suggested stop loss level",
+  "confidence": number between 0 and 100,
+  "urgency": "NOW" | "WAIT_FOR_SETUP" | "AVOID"
+}
+Respond ONLY with valid JSON. No markdown, no explanation outside the JSON.`;
+
+  const userPrompt = `Analyze this ${tf} chart of ${inst}.
+
+CURRENT COT DATA:
+${cotSummary}
+
+${ctx ? 'ADDITIONAL CONTEXT FROM TRADER:
+' + ctx + '
+' : ''}
+
+Based on the chart screenshot AND the COT data above, give me a complete swing trade analysis. 
+Remember: COT signals operate on 2–6 week horizon. The ${tf} chart is for timing the entry.
+Tell me exactly what to do — LONG, SHORT, or WAIT — with specific price levels.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: chartImageBase64.media_type,
+                data: chartImageBase64.data
+              }
+            },
+            { type: 'text', text: userPrompt }
+          ]
+        }]
+      })
+    });
+
+    const result = await response.json();
+    const raw = result.content[0].text;
+
+    // Parse JSON response
+    let parsed;
+    try {
+      const cleaned = raw.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch(e) {
+      throw new Error('Could not parse analysis response.');
+    }
+
+    renderAnalysis(parsed, inst, tf);
+
+  } catch(e) {
+    out.innerHTML = `<div class="analysis-placeholder" style="color:var(--red);">
+      <div style="font-size:1.5rem;">⚠</div>
+      <div>Analysis failed: ${e.message}<br><span style="font-size:.6rem;color:var(--muted);">Check your connection and try again.</span></div>
+    </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Re-analyze Chart + COT';
+  }
+}
+
+function renderAnalysis(a, inst, tf) {
+  const out = document.getElementById('analysisOutput');
+  const decCls = a.decision === 'LONG' ? 'long' : a.decision === 'SHORT' ? 'short' : 'wait';
+  const decColor = a.decision === 'LONG' ? 'var(--green)' : a.decision === 'SHORT' ? 'var(--red)' : 'var(--gold)';
+  const confColor = a.confidence >= 70 ? 'var(--green)' : a.confidence >= 45 ? 'var(--gold)' : 'var(--red)';
+  const urgencyLabel = { NOW: '⚡ Act Now', WAIT_FOR_SETUP: '⏳ Wait for Setup', AVOID: '🚫 Avoid' }[a.urgency] || a.urgency;
+  const urgencyColor = { NOW: 'var(--green)', WAIT_FOR_SETUP: 'var(--gold)', AVOID: 'var(--red)' }[a.urgency] || 'var(--muted2)';
+
+  out.innerHTML = `
+    <div class="action-verdict ${decCls}">
+      <div class="av-title">${a.decision === 'LONG' ? '▲ GO LONG' : a.decision === 'SHORT' ? '▼ GO SHORT' : '⏸ WAIT — NO TRADE'}</div>
+      <div style="font-size:.7rem;line-height:1.7;margin-bottom:.5rem;">${a.decisionReason}</div>
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+        <div><span style="font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">Confidence</span><br><span style="font-size:.95rem;font-weight:500;color:${confColor};">${a.confidence}%</span></div>
+        <div><span style="font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">Timing</span><br><span style="font-size:.95rem;font-weight:500;color:${urgencyColor};">${urgencyLabel}</span></div>
+        ${a.decision !== 'WAIT' ? `
+        <div><span style="font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">Entry Zone</span><br><span style="font-size:.82rem;font-weight:500;color:var(--text);">${a.entry}</span></div>
+        <div><span style="font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">Target</span><br><span style="font-size:.82rem;font-weight:500;color:var(--green);">${a.target}</span></div>
+        <div><span style="font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">Stop Loss</span><br><span style="font-size:.82rem;font-weight:500;color:var(--red);">${a.stop}</span></div>
+        ` : ''}
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;">
+      <div class="ai-section">
+        <div class="ai-section-title">📈 Trend & Price Action (${tf})</div>
+        <div class="ai-text"><strong>Trend:</strong> ${a.trend}</div>
+        <div class="ai-text" style="margin-top:.3rem;"><strong>Price Action:</strong> ${a.priceAction}</div>
+      </div>
+
+      <div class="ai-section">
+        <div class="ai-section-title">🎯 Key Levels</div>
+        <div class="ai-text">${a.keyLevels}</div>
+      </div>
+
+      <div class="ai-section">
+        <div class="ai-section-title">📊 COT Alignment</div>
+        <div class="ai-text">${a.cotAlignment}</div>
+      </div>
+
+      <div class="ai-section">
+        <div class="ai-section-title">⏱ Timeframe Note</div>
+        <div class="ai-text">${a.timeframeNote}</div>
+      </div>
+    </div>
+  `;
+}
+
+</script>
+</body>
+</html>
