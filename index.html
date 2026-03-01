@@ -585,7 +585,13 @@ svg.cot-chart { width: 100%; height: 180px; display: block; }
     <div class="logo">COT Analyzer</div>
     <div class="logo-sub">Mauricio Pierson · Coffee &amp; WTI · CFTC Data</div>
   </div>
-  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+  <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:.4rem;">
+      <input id="apiKeyInput" type="password" placeholder="sk-ant-... (Anthropic API key)"
+        style="background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:.38rem .7rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.65rem;width:220px;"
+        oninput="saveKey(this.value)">
+      <span id="keyStatus" style="font-size:.65rem;color:var(--muted);">🔑</span>
+    </div>
     <div class="last-updated" id="lastUpdated">Not yet fetched</div>
     <button class="fetch-btn" id="fetchBtn" onclick="fetchAll()">
       <span id="fetchIcon">⟳</span> Fetch Latest COT
@@ -736,7 +742,7 @@ svg.cot-chart { width: 100%; height: 180px; display: block; }
         <div>
           <div class="prob-section-label">Chart Screenshot</div>
           <!-- File input (hidden, triggered by button) -->
-          <input type="file" id="chartFile" accept="image/*" style="display:none;" onchange="handleFileInput(event)">
+          <input type="file" id="chartFile" accept="image/*" style="display:none;">
 
           <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:1.4rem 1rem;text-align:center;background:var(--card2);">
             <div id="dropIcon" style="font-size:1.6rem;margin-bottom:.5rem;opacity:.5;">📸</div>
@@ -1378,18 +1384,50 @@ window.addEventListener('DOMContentLoaded', () => {
   const instEl = document.getElementById('pInst');
   if (instEl) instEl.addEventListener('change', syncCOTToCalc);
   initPasteZone();
+  loadSavedKey();
 });
 
 
 // ---- CHART ANALYSIS ----
 let chartImageBase64 = null;
 
+function saveKey(val) {
+  if (val.startsWith('sk-ant-')) {
+    localStorage.setItem('cot_api_key', val);
+    document.getElementById('keyStatus').textContent = '✅';
+    document.getElementById('keyStatus').style.color = 'var(--green)';
+  } else {
+    document.getElementById('keyStatus').textContent = '🔑';
+    document.getElementById('keyStatus').style.color = 'var(--muted)';
+  }
+}
+
+function loadSavedKey() {
+  const k = localStorage.getItem('cot_api_key');
+  if (k) {
+    document.getElementById('apiKeyInput').value = k;
+    document.getElementById('keyStatus').textContent = '✅';
+    document.getElementById('keyStatus').style.color = 'var(--green)';
+  }
+}
+
 function initPasteZone() {
+  // Attach file input listener properly via JS (not inline onchange)
+  var fileInput = document.getElementById('chartFile');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      var file = this.files && this.files[0];
+      if (file) loadImageData(file);
+      // Reset so same file can be re-selected
+      this.value = '';
+    });
+  }
+
   // Global paste listener
   document.addEventListener('paste', function(e) {
-    const items = e.clipboardData && e.clipboardData.items;
+    var items = e.clipboardData && e.clipboardData.items;
     if (!items) return;
-    for (let i = 0; i < items.length; i++) {
+    for (var i = 0; i < items.length; i++) {
       if (items[i].type.startsWith('image/')) {
         e.preventDefault();
         loadImageData(items[i].getAsFile());
@@ -1397,11 +1435,6 @@ function initPasteZone() {
       }
     }
   });
-}
-
-function handleFileInput(event) {
-  const file = event.target.files[0];
-  if (file) loadImageData(file);
 }
 
 function loadImageData(file) {
@@ -1493,9 +1526,21 @@ Remember: COT signals operate on 2–6 week horizon. The ${tf} chart is for timi
 Tell me exactly what to do — LONG, SHORT, or WAIT — with specific price levels.`;
 
   try {
+    const apiKey = localStorage.getItem('cot_api_key') || '';
+    if (!apiKey) {
+      out.innerHTML = `<div class="analysis-placeholder" style="color:var(--gold);">
+        <div style="font-size:1.5rem;">🔑</div>
+        <div>Enter your Anthropic API key in the top-right field.<br>
+        <span style="font-size:.6rem;color:var(--muted);">Get one free at console.anthropic.com → API Keys</span></div>
+      </div>`;
+      btn.disabled = false;
+      btn.textContent = '⚡ Analyze Chart + COT';
+      return;
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
