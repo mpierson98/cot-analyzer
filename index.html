@@ -728,65 +728,61 @@ svg.cot-chart { width: 100%; height: 180px; display: block; }
   </div>
 
   <!-- CHART ANALYSIS SECTION -->
-  <div class="section-head" style="margin-top:1.5rem;">AI Chart Analysis + COT Combined</div>
+  <div class="section-head" style="margin-top:1.5rem;">AI Trade Decision — Describe Your Chart</div>
   <div class="analysis-card">
     <div class="analysis-top">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.08em;color:var(--text);">Upload Your Chart — Get a Trade Decision</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.08em;color:var(--text);">Describe What You See — Get a Trade Decision</div>
       <div style="font-size:.62rem;color:var(--muted2);margin-top:.2rem;line-height:1.6;">
-        Upload a screenshot of your chart (any timeframe, any platform). Claude will analyze the price action, trend, key levels, and combine it with the current COT signal to tell you exactly what to do.
+        Describe the current price action on your chart. Claude will combine your description with the live COT signal and tell you exactly what to do — Long, Short, or Wait — with entry, target and stop levels.
       </div>
     </div>
     <div class="analysis-grid">
       <div class="analysis-left">
 
-        <div>
-          <div class="prob-section-label">Chart Screenshot</div>
-          <div style="border:2px dashed #222430;border-radius:6px;padding:1.2rem;background:#14151b;">
-            <div style="font-size:.6rem;color:#5c6080;margin-bottom:.6rem;letter-spacing:.15em;text-transform:uppercase;">Select chart image file</div>
-            <input type="file" id="chartFile" accept="image/*"
-              style="display:block;width:100%;color:#bfc3d4;font-family:'JetBrains Mono',monospace;font-size:.75rem;
-                     background:#0c0d10;border:1px solid #222430;border-radius:4px;padding:.5rem .6rem;cursor:pointer;">
-            <div style="font-size:.58rem;color:#3d4056;margin-top:.5rem;">PNG · JPG · WebP — any trading platform screenshot</div>
+        <div class="ctx-select-row">
+          <div class="pi-group">
+            <label class="pi-label">Instrument</label>
+            <select class="pi-select" id="aInst">
+              <option value="Coffee (ICE)">☕ Coffee (ICE)</option>
+              <option value="WTI Crude Oil">🛢️ WTI Crude Oil</option>
+            </select>
           </div>
-          <div id="previewWrap" style="display:none;margin-top:.7rem;border:2px solid #34c472;border-radius:4px;overflow:hidden;">
-            <img id="chartPreview" style="width:100%;max-height:200px;object-fit:contain;display:block;background:#000;">
-            <div style="padding:.4rem .6rem;background:#14151b;font-size:.6rem;color:#34c472;">✅ Chart loaded — ready to analyze</div>
-          </div>
-        </div>
-        </div>
-
-        <div>
-          <div class="prob-section-label">Context for Analysis</div>
-          <div class="ctx-select-row">
-            <div class="pi-group">
-              <label class="pi-label">Instrument</label>
-              <select class="pi-select" id="aInst">
-                <option value="Coffee (ICE)">☕ Coffee (ICE)</option>
-                <option value="WTI Crude Oil">🛢️ WTI Crude Oil</option>
-              </select>
-            </div>
-            <div class="pi-group">
-              <label class="pi-label">Chart Timeframe</label>
-              <select class="pi-select" id="aTF">
-                <option value="5m">5 min</option>
-                <option value="15m">15 min</option>
-                <option value="30m" selected>30 min</option>
-                <option value="1H">1 Hour</option>
-                <option value="4H">4 Hour</option>
-                <option value="Daily">Daily</option>
-                <option value="Weekly">Weekly</option>
-              </select>
-            </div>
+          <div class="pi-group">
+            <label class="pi-label">Chart Timeframe</label>
+            <select class="pi-select" id="aTF">
+              <option value="5m">5 min</option>
+              <option value="15m">15 min</option>
+              <option value="30m" selected>30 min</option>
+              <option value="1H">1 Hour</option>
+              <option value="4H">4 Hour</option>
+              <option value="Daily">Daily</option>
+              <option value="Weekly">Weekly</option>
+            </select>
           </div>
         </div>
 
         <div class="pi-group">
-          <label class="pi-label">Any additional context? (optional)</label>
-          <textarea class="pi-input" id="aContext" rows="2" placeholder="e.g. I'm looking for a long setup, recent crop report was bearish, price just broke support..." style="resize:none;font-size:.72rem;line-height:1.5;"></textarea>
+          <label class="pi-label">Current Price &amp; Recent Movement</label>
+          <input type="text" class="pi-input" id="aPrice" placeholder="e.g. Price at 279.70, down from 308 high two weeks ago">
         </div>
 
-        <button class="analyze-btn" id="analyzeBtn" onclick="analyzeChart()" disabled>
-          ⬆ Upload a chart to analyze
+        <div class="pi-group">
+          <label class="pi-label">Trend &amp; Structure</label>
+          <textarea class="pi-input" id="aTrend" rows="2" style="resize:none;line-height:1.5;" placeholder="e.g. Downtrend since Feb 17 high at 308. Series of lower highs and lower lows. Currently consolidating between 276-284 for 5 days."></textarea>
+        </div>
+
+        <div class="pi-group">
+          <label class="pi-label">Key Levels You Can See</label>
+          <textarea class="pi-input" id="aLevels" rows="2" style="resize:none;line-height:1.5;" placeholder="e.g. Resistance at 284, 290, 308. Support at 276, 272. Current price sitting right at the 276 support zone."></textarea>
+        </div>
+
+        <div class="pi-group">
+          <label class="pi-label">Candlestick / Pattern Observations (optional)</label>
+          <textarea class="pi-input" id="aPattern" rows="2" style="resize:none;line-height:1.5;" placeholder="e.g. Doji candle formed at support. Small bodied candles — momentum slowing. No clear reversal pattern yet."></textarea>
+        </div>
+
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyzeChart()">
+          ⚡ Get Trade Decision
         </button>
 
       </div>
@@ -794,14 +790,12 @@ svg.cot-chart { width: 100%; height: 180px; display: block; }
         <div class="analysis-output" id="analysisOutput">
           <div class="analysis-placeholder">
             <div style="font-size:2.5rem;opacity:.15;">🔍</div>
-            <div>Upload a chart screenshot and press Analyze.<br>Claude will read the price action and cross-reference<br>with live COT data to give you a trade decision.</div>
+            <div>Fill in the chart description fields and press<br>"Get Trade Decision" to receive a full analysis<br>combining your price action with live COT data.</div>
           </div>
         </div>
       </div>
     </div>
   </div>
-
-
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1386,182 +1380,126 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 // ---- CHART ANALYSIS ----
-let chartImageBase64 = null;
-
-function initPasteZone() {
-  // Attach via JS after DOM ready - most reliable approach
-  var fi = document.getElementById('chartFile');
-  if (fi) {
-    fi.onchange = function() {
-      if (this.files && this.files[0]) {
-        readFile(this.files[0]);
-      }
-    };
-  }
-  // Paste support
-  document.addEventListener('paste', function(e) {
-    var items = e.clipboardData && e.clipboardData.items;
-    if (!items) return;
-    for (var i = 0; i < items.length; i++) {
-      if (items[i].kind === 'file' && items[i].type.match(/^image\//)) {
-        readFile(items[i].getAsFile());
-        return;
-      }
-    }
-  });
-}
-
-function readFile(file) {
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var dataUrl = ev.target.result;
-    // Show preview
-    var img = document.getElementById('chartPreview');
-    var wrap = document.getElementById('previewWrap');
-    img.src = dataUrl;
-    wrap.style.display = 'block';
-    // Store for API call
-    var parts = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (parts) {
-      chartImageBase64 = { media_type: parts[1], data: parts[2] };
-    }
-    // Enable button
-    var btn = document.getElementById('analyzeBtn');
-    btn.disabled = false;
-    btn.textContent = '⚡ Analyze Chart + COT';
-  };
-  reader.readAsDataURL(file);
-}
+function initPasteZone() { /* text-based analysis — no image upload needed */ }
 
 async function analyzeChart() {
-  if (!chartImageBase64) return;
+  const inst   = document.getElementById('aInst').value;
+  const tf     = document.getElementById('aTF').value;
+  const price  = document.getElementById('aPrice').value.trim();
+  const trend  = document.getElementById('aTrend').value.trim();
+  const levels = document.getElementById('aLevels').value.trim();
+  const pattern = document.getElementById('aPattern') ? document.getElementById('aPattern').value.trim() : '';
+  const out    = document.getElementById('analysisOutput');
+  const btn    = document.getElementById('analyzeBtn');
 
-  const inst = document.getElementById('aInst').value;
-  const tf   = document.getElementById('aTF').value;
-  const ctx  = document.getElementById('aContext').value;
-  const out  = document.getElementById('analysisOutput');
-  const btn  = document.getElementById('analyzeBtn');
+  if (!price && !trend && !levels) {
+    out.innerHTML = `<div class="analysis-placeholder" style="color:var(--red);">
+      <div style="font-size:1.5rem;">⚠</div>
+      <div>Fill in at least current price, trend, and key levels.</div>
+    </div>`;
+    return;
+  }
 
-  // Get current COT signal for this instrument
+  // Get COT signal
   const cotKey = inst.includes('Coffee') ? 'coffee' : 'wti';
   const cotRows = data[cotKey].map(parseRow);
-  let cotSummary = 'No COT data loaded yet.';
+  let cotSummary = 'No COT data loaded — fetch COT first for best results.';
   if (cotRows.length >= 2) {
     const { signal, score, strength } = calcSignal(cotRows);
     const latest = cotRows[0];
-    const prev   = cotRows[1];
+    const prev = cotRows[1];
     const commChg = latest.commNet - prev.commNet;
     cotSummary = `COT Signal: ${signal} (Score: ${score > 0 ? '+' : ''}${score}/100, Strength: ${strength}%).
-Commercial net position: ${latest.commNet > 0 ? '+' : ''}${Math.round(latest.commNet).toLocaleString()} contracts (WoW change: ${commChg > 0 ? '+' : ''}${Math.round(commChg).toLocaleString()}).
+Commercial net: ${latest.commNet > 0 ? '+' : ''}${Math.round(latest.commNet).toLocaleString()} contracts (WoW: ${commChg > 0 ? '+' : ''}${Math.round(commChg).toLocaleString()}).
 Large Spec net: ${latest.specNet > 0 ? '+' : ''}${Math.round(latest.specNet).toLocaleString()} contracts.
-Data as of: ${latest.date}.
-COT Swing Trade Horizon: 2–6 weeks forward.`;
+As of: ${latest.date}. COT horizon: 2–6 weeks forward.`;
   }
 
-  // Show loading
+  const apiKey = localStorage.getItem('cot_api_key') || '';
+  if (!apiKey) {
+    out.innerHTML = `<div class="analysis-placeholder" style="color:var(--gold);">
+      <div style="font-size:1.5rem;">🔑</div>
+      <div>Enter your Anthropic API key in the top-right field first.<br>
+      <span style="font-size:.6rem;color:var(--muted);">Get one free at console.anthropic.com → API Keys</span></div>
+    </div>`;
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = '⟳ Analyzing...';
-  out.innerHTML = `
-    <div class="analysis-loading">
-      <div style="font-size:1.5rem;opacity:.4;">🔍</div>
-      <div>Reading chart + COT data...</div>
-      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
-      <div style="font-size:.6rem;color:var(--muted);">Claude is analyzing price action, trend, key levels,<br>and cross-referencing with COT positioning.</div>
-    </div>`;
+  out.innerHTML = `<div class="analysis-loading">
+    <div style="font-size:1.5rem;opacity:.4;">🔍</div>
+    <div>Analyzing price action + COT data...</div>
+    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+    <div style="font-size:.6rem;color:var(--muted);">Combining your chart description with institutional positioning data.</div>
+  </div>`;
 
-  const systemPrompt = `You are an expert commodities trader and technical analyst specializing in ${inst}. 
-You analyze charts with surgical precision and give clear, actionable swing trade decisions.
-You always structure your response in exactly this JSON format:
+  const systemPrompt = `You are an expert commodities swing trader specializing in ${inst}.
+You give clear, decisive, actionable trade recommendations. No fluff. No hedging.
+Respond ONLY in this exact JSON format, nothing else:
 {
-  "trend": "string — overall trend direction and strength on this timeframe",
-  "keyLevels": "string — key support/resistance levels visible on the chart",
-  "priceAction": "string — candlestick patterns, momentum, volume observations",
-  "cotAlignment": "string — how the COT data aligns or conflicts with what you see on chart",
-  "timeframeNote": "string — what this timeframe tells us vs the COT swing horizon",
-  "decision": "LONG" | "SHORT" | "WAIT",
-  "decisionReason": "string — 2-3 sentences explaining the decision clearly",
-  "entry": "string — suggested entry zone or condition",
-  "target": "string — suggested target level",
-  "stop": "string — suggested stop loss level",
-  "confidence": number between 0 and 100,
-  "urgency": "NOW" | "WAIT_FOR_SETUP" | "AVOID"
-}
-Respond ONLY with valid JSON. No markdown, no explanation outside the JSON.`;
+  "trend": "brief trend summary",
+  "keyLevels": "key support and resistance levels",
+  "priceAction": "what the price action is telling you",
+  "cotAlignment": "how COT data aligns or conflicts with chart",
+  "timeframeNote": "what this timeframe means for the trade horizon",
+  "decision": "LONG" or "SHORT" or "WAIT",
+  "decisionReason": "2-3 sentences — exactly why",
+  "entry": "specific entry price or condition",
+  "target": "specific target price",
+  "stop": "specific stop loss price",
+  "confidence": number 0-100,
+  "urgency": "NOW" or "WAIT_FOR_SETUP" or "AVOID"
+}`;
 
-  const userPrompt = `Analyze this ${tf} chart of ${inst}.
+  const userPrompt = `Analyze this ${tf} chart of ${inst} and give me a swing trade decision.
 
-CURRENT COT DATA:
+CHART DESCRIPTION:
+- Current price / recent movement: ${price || 'Not provided'}
+- Trend & structure: ${trend || 'Not provided'}  
+- Key levels: ${levels || 'Not provided'}
+- Candlestick / patterns: ${pattern || 'Not provided'}
+
+LIVE COT DATA:
 ${cotSummary}
 
-${ctx ? 'ADDITIONAL CONTEXT FROM TRADER:
-' + ctx + '
-' : ''}
-
-Based on the chart screenshot AND the COT data above, give me a complete swing trade analysis. 
-Remember: COT signals operate on 2–6 week horizon. The ${tf} chart is for timing the entry.
-Tell me exactly what to do — LONG, SHORT, or WAIT — with specific price levels.`;
+Give me a decisive LONG, SHORT, or WAIT with exact price levels. Remember: COT is the 2-6 week directional bias, the ${tf} chart times the entry.`;
 
   try {
-    const apiKey = localStorage.getItem('cot_api_key') || '';
-    if (!apiKey) {
-      out.innerHTML = `<div class="analysis-placeholder" style="color:var(--gold);">
-        <div style="font-size:1.5rem;">🔑</div>
-        <div>Enter your Anthropic API key in the top-right field.<br>
-        <span style="font-size:.6rem;color:var(--muted);">Get one free at console.anthropic.com → API Keys</span></div>
-      </div>`;
-      btn.disabled = false;
-      btn.textContent = '⚡ Analyze Chart + COT';
-      return;
-    }
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         system: systemPrompt,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: chartImageBase64.media_type,
-                data: chartImageBase64.data
-              }
-            },
-            { type: 'text', text: userPrompt }
-          ]
-        }]
+        messages: [{ role: 'user', content: userPrompt }]
       })
     });
 
     const result = await response.json();
+    if (result.error) throw new Error(result.error.message);
     const raw = result.content[0].text;
-
-    // Parse JSON response
-    let parsed;
-    try {
-      const cleaned = raw.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(cleaned);
-    } catch(e) {
-      throw new Error('Could not parse analysis response.');
-    }
-
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
     renderAnalysis(parsed, inst, tf);
 
   } catch(e) {
     out.innerHTML = `<div class="analysis-placeholder" style="color:var(--red);">
       <div style="font-size:1.5rem;">⚠</div>
-      <div>Analysis failed: ${e.message}<br><span style="font-size:.6rem;color:var(--muted);">Check your connection and try again.</span></div>
+      <div>Error: ${e.message}</div>
     </div>`;
   } finally {
     btn.disabled = false;
-    btn.textContent = '⚡ Re-analyze Chart + COT';
+    btn.textContent = '⚡ Get Trade Decision';
   }
 }
+
 
 function renderAnalysis(a, inst, tf) {
   const out = document.getElementById('analysisOutput');
