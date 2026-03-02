@@ -636,8 +636,8 @@ async function generate() {
     // Build message content — text + images
     ls(3);
 
-    // Resize image to max 1600px on longest side, compress to JPEG
-    async function resizeImage(base64DataURL, maxPx=1600, quality=0.82) {
+    // Resize + compress image aggressively for API
+    async function resizeImage(base64DataURL, maxPx=1200, quality=0.72) {
       return new Promise(resolve => {
         const img = new Image();
         img.onload = () => {
@@ -652,6 +652,7 @@ async function generate() {
           ctx.drawImage(img,0,0,w,h);
           resolve(canvas.toDataURL('image/jpeg',quality));
         };
+        img.onerror = () => resolve(base64DataURL);
         img.src = base64DataURL;
       });
     }
@@ -680,20 +681,35 @@ For position sizing: Dollar risk=$${dollarRisk.toLocaleString()} | Coffee=37500l
 
 Respond ONLY in valid JSON (no markdown, no preamble, no backticks):`});
 
-    // Add all uploaded chart images
+    // Add all uploaded chart images — prioritize current commodity (all TFs), others (daily only)
     let imageCount = 0;
-    for (const [commKey, tfs] of Object.entries(charts)) {
+    const MAX_IMAGES = 20;
+
+    // First pass: all TFs for commodities with charts, but cap total
+    const commKeys = Object.keys(INSTRUMENTS);
+    // Sort: put commodity with most charts first
+    commKeys.sort((a,b) => Object.keys(charts[b]||{}).length - Object.keys(charts[a]||{}).length);
+
+    for (const commKey of commKeys) {
+      const tfs = charts[commKey]||{};
+      if (!Object.keys(tfs).length) continue;
+      if (imageCount >= MAX_IMAGES) break;
+      const inst = INSTRUMENTS[commKey];
       for (const tf of TIMEFRAMES) {
         const img = tfs[tf.key];
         if (!img) continue;
-        const inst = INSTRUMENTS[commKey];
+        if (imageCount >= MAX_IMAGES) break;
         messageContent.push({type:'text', text:`\n--- ${inst.icon} ${inst.name} · ${tf.label} Chart ---`});
-        const resized = await resizeImage(img.base64, 1600, 0.82);
+        const resized = await resizeImage(img.base64, 1200, 0.72);
         const base64Data = resized.split(',')[1];
         messageContent.push({type:'image', source:{type:'base64', media_type:'image/jpeg', data:base64Data}});
         imageCount++;
       }
     }
+
+    // Log payload estimate
+    const payloadEstimate = messageContent.reduce((s,b)=>s+(b.type==='image'?b.source.data.length:0),0);
+    console.log(`Sending ${imageCount} images, ~${(payloadEstimate/1024/1024).toFixed(1)}MB base64`);
 
     // JSON schema
     messageContent.push({type:'text', text:`
@@ -783,9 +799,14 @@ Respond ONLY in valid JSON (no markdown, no preamble, no backticks):`});
     showToast(`Analysis complete — ${parsed.tradeOfDay?.direction||'WAIT'} ${parsed.tradeOfDay?.commodity||''}`, true);
 
   } catch(e) {
-    document.getElementById('rpContent').innerHTML=`<div class="rp-empty"><div class="rp-empty-ico">⚠️</div><div class="rp-empty-txt">${e.message}</div></div>`;
-    showToast('Error: '+e.message);
-    console.error(e);
+    const msg = e.message || String(e);
+    const hint = msg.includes('fetch') ? 'Network error — check your internet connection. If using GitHub Pages, make sure your API key starts with sk-ant-' 
+               : msg.includes('key') ? 'Invalid API key — make sure it starts with sk-ant-'
+               : msg.includes('JSON') ? 'AI returned invalid response — try again'
+               : msg;
+    document.getElementById('rpContent').innerHTML=`<div class="rp-empty"><div class="rp-empty-ico">⚠️</div><div class="rp-empty-txt" style="text-align:left;max-width:340px;">${hint}<br><br><span style="color:var(--muted);font-size:.55rem;">${msg}</span></div></div>`;
+    showToast('Error: '+msg.slice(0,60));
+    console.error('Full error:', e);
   } finally {
     btn.disabled=false; btn.textContent='⚡ Analyze Charts';
   }
