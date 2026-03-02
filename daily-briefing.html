@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Commodity Briefing — Mauricio Pierson</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #06070a;
+  --surface: #0a0b0f;
+  --card: #0e0f14;
+  --card2: #121318;
+  --border: #181920;
+  --border2: #1e2028;
+  --text: #c8ccd8;
+  --muted: #363848;
+  --muted2: #525670;
+  --gold: #d4a53a;
+  --gold2: #f0c060;
+  --gold-bg: rgba(212,165,58,.07);
+  --green: #2ecc7a;
+  --green-bg: rgba(46,204,122,.07);
+  --red: #e04f4f;
+  --red-bg: rgba(224,79,79,.07);
+  --blue: #4a8fff;
+  --blue-bg: rgba(74,143,255,.07);
+  --coffee: #c47840;
+  --gold-c: #e8c040;
+  --grain: #7ab840;
+  --r: 6px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;min-height:100vh;overflow-x:hidden;}
+
+/* GRID TEXTURE */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* HEADER */
+.header{position:sticky;top:0;z-index:100;background:rgba(6,7,10,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.2em;color:var(--gold);}
+.logo-sub{font-size:.48rem;letter-spacing:.3em;color:var(--muted2);text-transform:uppercase;margin-top:.1rem;}
+.header-right{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.date-display{font-size:.6rem;letter-spacing:.15em;color:var(--muted2);text-transform:uppercase;}
+.key-wrap{display:flex;align-items:center;gap:.4rem;}
+.key-input{background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:.35rem .6rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.6rem;width:200px;}
+.key-status{font-size:.7rem;}
+.gen-btn{background:var(--gold);color:var(--bg);border:none;padding:.45rem 1.2rem;border-radius:var(--r);font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.12em;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.gen-btn:hover{background:var(--gold2);}
+.gen-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* MAIN */
+.main{position:relative;z-index:1;padding:1.5rem 2rem;max-width:1400px;margin:0 auto;}
+
+/* DAY SELECTOR */
+.day-bar{display:flex;gap:.4rem;margin-bottom:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.3rem;width:fit-content;}
+.day-btn{background:none;border:none;color:var(--muted2);font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.1em;padding:.4rem .9rem;border-radius:4px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
+.day-btn.active{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(212,165,58,.2);}
+.day-btn:hover:not(.active){color:var(--text);}
+.day-btn.today-marker{position:relative;}
+.day-btn.today-marker::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:3px;background:var(--gold);border-radius:50%;}
+
+/* SECTION HEAD */
+.section-head{font-size:.5rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem;display:flex;align-items:center;gap:.8rem;}
+.section-head::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* TRADE OF THE DAY */
+.tod-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.5rem;}
+.tod-header{padding:1.2rem 1.5rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;}
+.tod-label{font-size:.5rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted2);}
+.tod-name{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.1em;}
+.tod-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.tod-left{padding:1.4rem 1.5rem;border-right:1px solid var(--border);}
+.tod-right{padding:1.4rem 1.5rem;}
+.verdict-box{border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:1rem;}
+.verdict-box.long{background:var(--green-bg);border:1px solid rgba(46,204,122,.2);}
+.verdict-box.short{background:var(--red-bg);border:1px solid rgba(224,79,79,.2);}
+.verdict-box.wait{background:var(--gold-bg);border:1px solid rgba(212,165,58,.2);}
+.verdict-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.1em;margin-bottom:.4rem;}
+.verdict-box.long .verdict-title{color:var(--green);}
+.verdict-box.short .verdict-title{color:var(--red);}
+.verdict-box.wait .verdict-title{color:var(--gold);}
+.verdict-text{font-size:.68rem;line-height:1.75;color:var(--text);}
+.levels-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-top:.8rem;}
+.level-box{background:var(--card2);padding:.7rem .6rem;text-align:center;}
+.level-label{font-size:.45rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem;}
+.level-val{font-size:1rem;font-weight:500;}
+.level-val.entry{color:var(--gold);}
+.level-val.target{color:var(--green);}
+.level-val.stop{color:var(--red);}
+.conf-bar-wrap{margin-top:.8rem;}
+.conf-label{font-size:.48rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;display:flex;justify-content:space-between;}
+.conf-bar{height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.conf-fill{height:100%;background:var(--green);border-radius:2px;transition:width 1s ease;}
+
+/* COMMODITY SCOREBOARD */
+.scoreboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem;margin-bottom:1.5rem;}
+.score-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.2rem;position:relative;overflow:hidden;}
+.score-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.score-card.coffee::before{background:var(--coffee);}
+.score-card.gold-c::before{background:var(--gold-c);}
+.score-card.grain::before{background:var(--grain);}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;}
+.sc-name{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;}
+.sc-signal{font-size:.6rem;letter-spacing:.1em;padding:.25rem .6rem;border-radius:3px;font-weight:500;}
+.sc-signal.bull{background:var(--green-bg);color:var(--green);border:1px solid rgba(46,204,122,.2);}
+.sc-signal.bear{background:var(--red-bg);color:var(--red);border:1px solid rgba(224,79,79,.2);}
+.sc-signal.neut{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(212,165,58,.2);}
+.sc-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.7rem;}
+.sc-metric{text-align:center;}
+.sc-metric-label{font-size:.42rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.15rem;}
+.sc-metric-val{font-size:.8rem;font-weight:500;}
+.sc-summary{font-size:.62rem;line-height:1.65;color:var(--muted2);}
+
+/* CALENDAR */
+.calendar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem;margin-bottom:1.5rem;}
+.cal-day{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.cal-day-header{padding:.5rem .7rem;background:var(--card2);border-bottom:1px solid var(--border);font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted2);}
+.cal-day-header.today{color:var(--gold);}
+.cal-events{padding:.5rem .6rem;display:flex;flex-direction:column;gap:.35rem;min-height:60px;}
+.cal-event{font-size:.58rem;padding:.3rem .5rem;border-radius:3px;line-height:1.4;}
+.cal-event.high{background:rgba(224,79,79,.1);border-left:2px solid var(--red);color:#f0a0a0;}
+.cal-event.med{background:rgba(212,165,58,.1);border-left:2px solid var(--gold);color:#e8d090;}
+.cal-event.low{background:rgba(74,143,255,.1);border-left:2px solid var(--blue);color:#90b8f0;}
+.cal-empty{font-size:.58rem;color:var(--muted);font-style:italic;padding:.3rem 0;}
+
+/* FUNDAMENTAL NEWS */
+.news-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:.8rem;margin-bottom:1.5rem;}
+.news-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.2rem;}
+.news-commodity{font-size:.48rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem;}
+.news-commodity.coffee{color:var(--coffee);}
+.news-commodity.gold-c{color:var(--gold-c);}
+.news-commodity.grain{color:var(--grain);}
+.news-text{font-size:.67rem;line-height:1.8;color:var(--text);}
+.news-text strong{font-weight:500;}
+
+/* LOADING */
+.loading-state{text-align:center;padding:4rem 2rem;}
+.loading-spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:.7rem;color:var(--muted2);}
+.loading-steps{margin-top:1rem;display:flex;flex-direction:column;gap:.3rem;}
+.loading-step{font-size:.6rem;color:var(--muted);transition:color .3s;}
+.loading-step.active{color:var(--gold);}
+.loading-step.done{color:var(--green);}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:5rem 2rem;border:1px dashed var(--border2);border-radius:var(--r);}
+.empty-icon{font-size:2.5rem;opacity:.15;margin-bottom:1rem;}
+.empty-title{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--muted2);margin-bottom:.5rem;}
+.empty-sub{font-size:.68rem;color:var(--muted);line-height:1.7;}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--red);color:#fff;padding:.65rem 1.1rem;border-radius:var(--r);font-size:.68rem;transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.ok{background:var(--green);}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .tod-body{grid-template-columns:1fr;}
+  .tod-left{border-right:none;border-bottom:1px solid var(--border);}
+  .calendar-grid{grid-template-columns:repeat(3,1fr);}
+  .header{padding:0 1rem;flex-wrap:wrap;height:auto;gap:.5rem;padding:.6rem 1rem;}
+  .main{padding:1rem;}
+}
+@media(max-width:600px){
+  .calendar-grid{grid-template-columns:1fr 1fr;}
+  .day-bar{flex-wrap:wrap;}
+}
+
+/* AI ANALYSIS BOX */
+.ai-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem 1.4rem;margin-bottom:1.5rem;}
+.ai-box-title{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:.7rem;}
+.ai-narrative{font-size:.7rem;line-height:1.9;color:var(--text);}
+.ai-narrative strong{color:var(--gold2);font-weight:500;}
+.ai-narrative em{color:var(--muted2);font-style:normal;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">Daily Briefing</div>
+    <div class="logo-sub">Mauricio Pierson · Commodities · Mon–Fri</div>
+  </div>
+  <div class="header-right">
+    <div class="date-display" id="dateDisplay"></div>
+    <div class="key-wrap">
+      <input class="key-input" type="password" id="apiKey" placeholder="sk-ant-... (Anthropic key)" oninput="saveKey(this.value)">
+      <span class="key-status" id="keyStatus">🔑</span>
+    </div>
+    <button class="gen-btn" id="genBtn" onclick="generateBriefing()">⚡ Generate Today's Briefing</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- DAY SELECTOR -->
+  <div class="day-bar" id="dayBar"></div>
+
+  <!-- CONTENT AREA -->
+  <div id="contentArea">
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">No briefing generated yet</div>
+      <div class="empty-sub">
+        Enter your Anthropic API key above and press <strong style="color:var(--gold);">Generate Today's Briefing</strong>.<br>
+        Claude will analyze Coffee, Gold, and Grains using COT data, fundamentals,<br>
+        and this week's economic calendar to tell you exactly what to trade.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- CONFIG ----
+const COMMODITIES = {
+  coffee: { name:'Coffee (KC)', icon:'☕', color:'var(--coffee)', cls:'coffee', cotMarket:'COFFEE C - ICE FUTURES U.S.' },
+  gold:   { name:'Gold (GC)',   icon:'🥇', color:'var(--gold-c)', cls:'gold-c', cotMarket:'GOLD - COMMODITY EXCHANGE INC.' },
+  corn:   { name:'Corn (ZC)',   icon:'🌽', color:'var(--grain)',  cls:'grain',  cotMarket:'CORN - CHICAGO BOARD OF TRADE' },
+  wheat:  { name:'Wheat (ZW)',  icon:'🌾', color:'var(--grain)',  cls:'grain',  cotMarket:'WHEAT-SRW - CHICAGO BOARD OF TRADE' },
+  soy:    { name:'Soybeans (ZS)',icon:'🫘',color:'var(--grain)', cls:'grain',  cotMarket:'SOYBEANS - CHICAGO BOARD OF TRADE' }
+};
+
+const COT_BASE = 'https://publicreporting.cftc.gov/resource/6dca-aqww.json';
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+
+let currentDay = null;
+let briefingData = {};
+let cotData = {};
+
+// ---- INIT ----
+window.addEventListener('DOMContentLoaded', () => {
+  loadKey();
+  setDateDisplay();
+  buildDayBar();
+});
+
+function setDateDisplay() {
+  const now = new Date();
+  const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('en-US', opts).toUpperCase();
+}
+
+function buildDayBar() {
+  const bar = document.getElementById('dayBar');
+  const todayIdx = new Date().getDay(); // 0=Sun,1=Mon...5=Fri,6=Sat
+  DAYS.forEach((d, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'day-btn' + (i+1 === todayIdx ? ' today-marker' : '');
+    btn.textContent = d.slice(0,3);
+    btn.onclick = () => switchDay(d, btn);
+    if (i+1 === todayIdx) {
+      btn.classList.add('active');
+      currentDay = d;
+    }
+    bar.appendChild(btn);
+  });
+  // Default to Monday if weekend
+  if (!currentDay) {
+    currentDay = 'Monday';
+    bar.children[0].classList.add('active');
+  }
+}
+
+function switchDay(day, btn) {
+  currentDay = day;
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (briefingData[day]) renderBriefing(briefingData[day], day);
+  else showEmpty();
+}
+
+function showEmpty() {
+  document.getElementById('contentArea').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">📅</div>
+      <div class="empty-title">No briefing for ${currentDay}</div>
+      <div class="empty-sub">Press Generate to create today's briefing, or this day hasn't been generated yet.</div>
+    </div>`;
+}
+
+// ---- KEY ----
+function saveKey(val) {
+  val = val.trim();
+  if (val.startsWith('sk-ant-')) {
+    localStorage.setItem('briefing_api_key', val);
+    document.getElementById('keyStatus').textContent = '✅';
+  } else {
+    document.getElementById('keyStatus').textContent = '🔑';
+  }
+}
+function loadKey() {
+  const k = localStorage.getItem('briefing_api_key');
+  if (k) { document.getElementById('apiKey').value = k; document.getElementById('keyStatus').textContent = '✅'; }
+}
+function getKey() {
+  const v = (document.getElementById('apiKey').value || '').trim();
+  if (v.startsWith('sk-ant-')) { localStorage.setItem('briefing_api_key', v); return v; }
+  return localStorage.getItem('briefing_api_key') || '';
+}
+
+// ---- COT FETCH ----
+async function fetchCOT(marketName) {
+  try {
+    const url = `${COT_BASE}?$where=market_and_exchange_names='${marketName}'&$order=report_date_as_yyyy_mm_dd DESC&$limit=4`;
+    const res = await fetch(url);
+    const rows = await res.json();
+    if (!rows.length) return null;
+    const r = rows[0];
+    const commNet = parseFloat(r.comm_positions_long_all||0) - parseFloat(r.comm_positions_short_all||0);
+    const specNet = parseFloat(r.noncomm_positions_long_all||0) - parseFloat(r.noncomm_positions_short_all||0);
+    const prev = rows[1] ? (parseFloat(rows[1].comm_positions_long_all||0) - parseFloat(rows[1].comm_positions_short_all||0)) : commNet;
+    const commChg = commNet - prev;
+    const oi = parseFloat(r.open_interest_all||1);
+    const score = Math.round(((commNet/oi)*100)*2.5);
+    const signal = score >= 35 ? 'BULLISH' : score <= -35 ? 'BEARISH' : 'NEUTRAL';
+    return { signal, score, commNet: Math.round(commNet), specNet: Math.round(specNet), commChg: Math.round(commChg), date: r.report_date_as_yyyy_mm_dd };
+  } catch(e) { return null; }
+}
+
+// ---- CALENDAR ----
+function getWeekCalendar() {
+  const now = new Date();
+  const mon = new Date(now);
+  const day = now.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  mon.setDate(now.getDate() + diff);
+
+  // Fixed weekly events + computed dates
+  const events = {
+    Monday:    [{ label:'CFTC COT preview week', impact:'low' }],
+    Tuesday:   [{ label:'API Oil Inventories (4:30pm ET)', impact:'med' }],
+    Wednesday: [{ label:'EIA Crude Inventories (10:30am ET)', impact:'high' }, { label:'USDA Export Inspections', impact:'med' }],
+    Thursday:  [{ label:'USDA Export Sales Report (8:30am ET)', impact:'high' }, { label:'Jobless Claims', impact:'med' }],
+    Friday:    [{ label:'COT Report Release (3:30pm ET)', impact:'high' }, { label:'Baker Hughes Rig Count (1pm ET)', impact:'med' }]
+  };
+
+  // Add month-specific events
+  const monthDay = now.getDate();
+  if (monthDay >= 8 && monthDay <= 12) {
+    events.Wednesday = [{ label:'WASDE Report (USDA)', impact:'high' }, ...events.Wednesday];
+  }
+
+  return events;
+}
+
+// ---- GENERATE ----
+async function generateBriefing() {
+  const key = getKey();
+  if (!key) { showToast('Enter your Anthropic API key first'); return; }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Generating...';
+
+  // Show loading
+  document.getElementById('contentArea').innerHTML = `
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Building your daily briefing...</div>
+      <div class="loading-steps">
+        <div class="loading-step active" id="step1">① Fetching COT data from CFTC...</div>
+        <div class="loading-step" id="step2">② Analyzing fundamentals for Coffee, Gold, Grains...</div>
+        <div class="loading-step" id="step3">③ Cross-referencing economic calendar...</div>
+        <div class="loading-step" id="step4">④ AI generating trade decisions...</div>
+        <div class="loading-step" id="step5">⑤ Building briefing...</div>
+      </div>
+    </div>`;
+
+  const setStep = (n) => {
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById('step'+i);
+      if (!el) return;
+      if (i < n) el.className = 'loading-step done';
+      else if (i === n) el.className = 'loading-step active';
+      else el.className = 'loading-step';
+    }
+  };
+
+  try {
+    // Step 1: Fetch COT
+    setStep(1);
+    const [coffeeCOT, goldCOT, cornCOT] = await Promise.all([
+      fetchCOT('COFFEE C - ICE FUTURES U.S.'),
+      fetchCOT('GOLD - COMMODITY EXCHANGE INC.'),
+      fetchCOT('CORN - CHICAGO BOARD OF TRADE')
+    ]);
+
+    setStep(2);
+    const calendar = getWeekCalendar();
+    const todayEvents = calendar[currentDay] || [];
+
+    setStep(3);
+    await new Promise(r => setTimeout(r, 400));
+
+    setStep(4);
+    // Build context for AI
+    const cotSummary = `
+COT DATA (latest available):
+- Coffee (KC): ${coffeeCOT ? `Signal: ${coffeeCOT.signal}, Score: ${coffeeCOT.score}, Comm Net: ${coffeeCOT.commNet.toLocaleString()}, WoW Change: ${coffeeCOT.commChg > 0 ? '+' : ''}${coffeeCOT.commChg.toLocaleString()}` : 'Data unavailable'}
+- Gold (GC): ${goldCOT ? `Signal: ${goldCOT.signal}, Score: ${goldCOT.score}, Comm Net: ${goldCOT.commNet.toLocaleString()}, WoW Change: ${goldCOT.commChg > 0 ? '+' : ''}${goldCOT.commChg.toLocaleString()}` : 'Data unavailable'}
+- Corn (ZC): ${cornCOT ? `Signal: ${cornCOT.signal}, Score: ${cornCOT.score}, Comm Net: ${cornCOT.commNet.toLocaleString()}, WoW Change: ${cornCOT.commChg > 0 ? '+' : ''}${cornCOT.commChg.toLocaleString()}` : 'Data unavailable'}`;
+
+    const todayCalStr = todayEvents.map(e => `- ${e.label} (${e.impact} impact)`).join('\n') || '- No major events today';
+
+    const prompt = `You are an expert commodity trader and analyst. Today is ${currentDay}, ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}.
+
+${cotSummary}
+
+TODAY'S ECONOMIC CALENDAR (${currentDay}):
+${todayCalStr}
+
+COMMODITIES TO ANALYZE: Coffee (KC - ICE Futures), Gold (GC - COMEX), Corn/Wheat/Soybeans (CBOT Grains)
+
+Based on the COT data, today's economic calendar, current fundamental drivers (Brazilian weather for coffee, USD/DXY for gold, USDA crop cycle for grains, global macro), provide a complete daily trading briefing.
+
+Respond ONLY in this exact JSON format:
+{
+  "tradeOfDay": {
+    "commodity": "Coffee" | "Gold" | "Corn" | "Wheat" | "Soybeans",
+    "icon": "☕" | "🥇" | "🌽" | "🌾" | "🫘",
+    "direction": "LONG" | "SHORT" | "WAIT",
+    "confidence": number 0-100,
+    "entry": "price or zone as string",
+    "target": "price as string",
+    "stop": "price as string",
+    "rr": "ratio as string e.g. 2.8R",
+    "reason": "2-3 sentences combining COT + fundamental + technical reasoning",
+    "timing": "NOW" | "WAIT_FOR_SETUP" | "END_OF_DAY"
+  },
+  "commodities": {
+    "coffee": {
+      "signal": "BULLISH" | "BEARISH" | "NEUTRAL",
+      "cotScore": number,
+      "fundamentalBias": "BULLISH" | "BEARISH" | "NEUTRAL",
+      "overallScore": number 0-100,
+      "summary": "2 sentences on key drivers this week"
+    },
+    "gold": {
+      "signal": "BULLISH" | "BEARISH" | "NEUTRAL",
+      "cotScore": number,
+      "fundamentalBias": "BULLISH" | "BEARISH" | "NEUTRAL",
+      "overallScore": number 0-100,
+      "summary": "2 sentences on key drivers this week"
+    },
+    "grains": {
+      "signal": "BULLISH" | "BEARISH" | "NEUTRAL",
+      "cotScore": number,
+      "fundamentalBias": "BULLISH" | "BEARISH" | "NEUTRAL",
+      "overallScore": number 0-100,
+      "summary": "2 sentences on key drivers this week"
+    }
+  },
+  "narrative": "3-4 sentence macro overview of what is driving commodity markets this week. Mention specific fundamental catalysts, COT positioning context, and what Mauricio should focus on today as a swing trader.",
+  "calendarAlert": "1-2 sentences about today's most important scheduled event and how to trade around it"
+}`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role:'user', content: prompt }]
+      })
+    });
+
+    const result = await res.json();
+    if (result.error) throw new Error(result.error.message);
+
+    const raw = result.content[0].text;
+    const cleaned = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(cleaned);
+
+    setStep(5);
+    await new Promise(r => setTimeout(r, 300));
+
+    // Store and render
+    parsed.cotData = { coffee: coffeeCOT, gold: goldCOT, corn: cornCOT };
+    parsed.calendar = calendar;
+    briefingData[currentDay] = parsed;
+    renderBriefing(parsed, currentDay);
+
+  } catch(e) {
+    document.getElementById('contentArea').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">Generation failed</div>
+        <div class="empty-sub">${e.message}<br><br>Check your API key and try again.</div>
+      </div>`;
+    showToast('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Generate Today\'s Briefing';
+  }
+}
+
+// ---- RENDER ----
+function renderBriefing(d, day) {
+  const tod = d.tradeOfDay;
+  const dirCls = tod.direction === 'LONG' ? 'long' : tod.direction === 'SHORT' ? 'short' : 'wait';
+  const dirLabel = tod.direction === 'LONG' ? '▲ GO LONG' : tod.direction === 'SHORT' ? '▼ GO SHORT' : '⏸ WAIT';
+  const dirColor = tod.direction === 'LONG' ? 'var(--green)' : tod.direction === 'SHORT' ? 'var(--red)' : 'var(--gold)';
+  const timingLabel = { NOW:'⚡ Enter Now', WAIT_FOR_SETUP:'⏳ Wait for Setup', END_OF_DAY:'🔔 End of Day Setup' }[tod.timing] || tod.timing;
+  const timingColor = { NOW:'var(--green)', WAIT_FOR_SETUP:'var(--gold)', END_OF_DAY:'var(--blue)' }[tod.timing] || 'var(--muted2)';
+
+  const cal = d.calendar || getWeekCalendar();
+
+  const signalBadge = (s) => {
+    const cls = s === 'BULLISH' ? 'bull' : s === 'BEARISH' ? 'bear' : 'neut';
+    return `<span class="sc-signal ${cls}">${s}</span>`;
+  };
+
+  const scoreColor = (s) => s >= 65 ? 'var(--green)' : s >= 40 ? 'var(--gold)' : 'var(--red)';
+
+  document.getElementById('contentArea').innerHTML = `
+
+    <!-- MACRO NARRATIVE -->
+    <div class="section-head">Market Overview — ${day}</div>
+    <div class="ai-box">
+      <div class="ai-box-title">⚡ AI Market Narrative</div>
+      <div class="ai-narrative">${d.narrative}</div>
+      ${d.calendarAlert ? `<div style="margin-top:.8rem;padding:.7rem .9rem;background:rgba(212,165,58,.07);border:1px solid rgba(212,165,58,.15);border-radius:4px;font-size:.65rem;line-height:1.7;color:#e8d090;">📅 <strong style="color:var(--gold);">Calendar Alert:</strong> ${d.calendarAlert}</div>` : ''}
+    </div>
+
+    <!-- TRADE OF THE DAY -->
+    <div class="section-head">Trade of the Day</div>
+    <div class="tod-card">
+      <div class="tod-header">
+        <div>
+          <div class="tod-label">Best Setup · ${day}</div>
+          <div class="tod-name" style="color:${dirColor};">${tod.icon} ${tod.commodity}</div>
+        </div>
+        <div style="display:flex;gap:1.5rem;align-items:center;">
+          <div style="text-align:center;">
+            <div style="font-size:.45rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem;">Confidence</div>
+            <div style="font-size:1.3rem;font-family:'Bebas Neue',sans-serif;color:${scoreColor(tod.confidence)};">${tod.confidence}%</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:.45rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem;">Timing</div>
+            <div style="font-size:.75rem;font-weight:500;color:${timingColor};">${timingLabel}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:.45rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem;">R:R</div>
+            <div style="font-size:1.3rem;font-family:'Bebas Neue',sans-serif;color:var(--gold);">${tod.rr}</div>
+          </div>
+        </div>
+      </div>
+      <div class="tod-body">
+        <div class="tod-left">
+          <div class="verdict-box ${dirCls}">
+            <div class="verdict-title">${dirLabel}</div>
+            <div class="verdict-text">${tod.reason}</div>
+          </div>
+          <div class="levels-grid">
+            <div class="level-box"><div class="level-label">Entry Zone</div><div class="level-val entry">${tod.entry}</div></div>
+            <div class="level-box"><div class="level-label">Target</div><div class="level-val target">${tod.target}</div></div>
+            <div class="level-box"><div class="level-label">Stop Loss</div><div class="level-val stop">${tod.stop}</div></div>
+          </div>
+          <div class="conf-bar-wrap">
+            <div class="conf-label"><span>Signal Strength</span><span style="color:${scoreColor(tod.confidence)};">${tod.confidence}%</span></div>
+            <div class="conf-bar"><div class="conf-fill" style="width:${tod.confidence}%;background:${scoreColor(tod.confidence)};"></div></div>
+          </div>
+        </div>
+        <div class="tod-right">
+          <div style="font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem;">Commodity Scoreboard</div>
+          ${renderScoreboardInline(d.commodities)}
+        </div>
+      </div>
+    </div>
+
+    <!-- ECONOMIC CALENDAR -->
+    <div class="section-head">Economic Calendar — This Week</div>
+    <div class="calendar-grid">
+      ${DAYS.map(dy => {
+        const evts = cal[dy] || [];
+        const isToday = dy === day;
+        return `<div class="cal-day">
+          <div class="cal-day-header ${isToday ? 'today' : ''}">${isToday ? '▶ ' : ''}${dy}</div>
+          <div class="cal-events">
+            ${evts.length ? evts.map(e => `<div class="cal-event ${e.impact}">${e.label}</div>`).join('') : '<div class="cal-empty">No major events</div>'}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- FUNDAMENTAL NEWS -->
+    <div class="section-head">Fundamental Drivers This Week</div>
+    <div class="news-grid">
+      <div class="news-card">
+        <div class="news-commodity coffee">☕ COFFEE (KC)</div>
+        <div class="news-text">${d.commodities.coffee.summary}</div>
+        <div style="margin-top:.7rem;display:flex;gap:.5rem;align-items:center;">
+          ${signalBadge(d.commodities.coffee.signal)}
+          <span style="font-size:.55rem;color:var(--muted2);">COT Score: <strong style="color:var(--text);">${d.commodities.coffee.cotScore > 0 ? '+' : ''}${d.commodities.coffee.cotScore}</strong></span>
+          <span style="font-size:.55rem;color:var(--muted2);">Fundamental: <strong style="color:${d.commodities.coffee.fundamentalBias === 'BULLISH' ? 'var(--green)' : d.commodities.coffee.fundamentalBias === 'BEARISH' ? 'var(--red)' : 'var(--gold)'};">${d.commodities.coffee.fundamentalBias}</strong></span>
+        </div>
+      </div>
+      <div class="news-card">
+        <div class="news-commodity gold-c">🥇 GOLD (GC)</div>
+        <div class="news-text">${d.commodities.gold.summary}</div>
+        <div style="margin-top:.7rem;display:flex;gap:.5rem;align-items:center;">
+          ${signalBadge(d.commodities.gold.signal)}
+          <span style="font-size:.55rem;color:var(--muted2);">COT Score: <strong style="color:var(--text);">${d.commodities.gold.cotScore > 0 ? '+' : ''}${d.commodities.gold.cotScore}</strong></span>
+          <span style="font-size:.55rem;color:var(--muted2);">Fundamental: <strong style="color:${d.commodities.gold.fundamentalBias === 'BULLISH' ? 'var(--green)' : d.commodities.gold.fundamentalBias === 'BEARISH' ? 'var(--red)' : 'var(--gold)'};">${d.commodities.gold.fundamentalBias}</strong></span>
+        </div>
+      </div>
+      <div class="news-card">
+        <div class="news-commodity grain">🌽 GRAINS (ZC/ZW/ZS)</div>
+        <div class="news-text">${d.commodities.grains.summary}</div>
+        <div style="margin-top:.7rem;display:flex;gap:.5rem;align-items:center;">
+          ${signalBadge(d.commodities.grains.signal)}
+          <span style="font-size:.55rem;color:var(--muted2);">COT Score: <strong style="color:var(--text);">${d.commodities.grains.cotScore > 0 ? '+' : ''}${d.commodities.grains.cotScore}</strong></span>
+          <span style="font-size:.55rem;color:var(--muted2);">Fundamental: <strong style="color:${d.commodities.grains.fundamentalBias === 'BULLISH' ? 'var(--green)' : d.commodities.grains.fundamentalBias === 'BEARISH' ? 'var(--red)' : 'var(--gold)'};">${d.commodities.grains.fundamentalBias}</strong></span>
+        </div>
+      </div>
+    </div>
+
+  `;
+}
+
+function renderScoreboardInline(commodities) {
+  const items = [
+    { key:'coffee', label:'Coffee (KC)', icon:'☕', data: commodities.coffee },
+    { key:'gold',   label:'Gold (GC)',   icon:'🥇', data: commodities.gold },
+    { key:'grains', label:'Grains',      icon:'🌽', data: commodities.grains }
+  ];
+  return items.map(item => {
+    const s = item.data.signal;
+    const cls = s === 'BULLISH' ? 'bull' : s === 'BEARISH' ? 'bear' : 'neut';
+    const sc = item.data.overallScore;
+    const barColor = sc >= 65 ? 'var(--green)' : sc >= 40 ? 'var(--gold)' : 'var(--red)';
+    return `
+      <div style="margin-bottom:.9rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
+          <span style="font-size:.68rem;">${item.icon} ${item.label}</span>
+          <span class="sc-signal ${cls}" style="font-size:.5rem;">${s}</span>
+        </div>
+        <div style="height:3px;background:var(--border2);border-radius:2px;overflow:hidden;">
+          <div style="width:${sc}%;height:100%;background:${barColor};border-radius:2px;transition:width 1s ease;"></div>
+        </div>
+        <div style="font-size:.55rem;color:var(--muted2);margin-top:.2rem;">${item.data.summary.split('.')[0]}.</div>
+      </div>`;
+  }).join('');
+}
+
+// ---- TOAST ----
+function showToast(msg, ok=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (ok?' ok':'');
+  setTimeout(() => t.classList.remove('show'), ok ? 2500 : 5000);
+}
+</script>
+</body>
+</html>
