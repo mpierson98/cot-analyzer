@@ -801,6 +801,38 @@ svg.cot-chart { width: 100%; height: 180px; display: block; }
 <div class="toast" id="toast"></div>
 
 <script>
+// ---- API KEY ----
+function saveKey(val) {
+  val = val.trim();
+  if (val.startsWith('sk-ant-')) {
+    localStorage.setItem('cot_api_key', val);
+    document.getElementById('keyStatus').textContent = '✅';
+    document.getElementById('keyStatus').style.color = '#34c472';
+  } else {
+    document.getElementById('keyStatus').textContent = '🔑';
+    document.getElementById('keyStatus').style.color = '#3d4056';
+  }
+}
+
+function loadSavedKey() {
+  var k = localStorage.getItem('cot_api_key');
+  if (k) {
+    document.getElementById('apiKeyInput').value = k;
+    document.getElementById('keyStatus').textContent = '✅';
+    document.getElementById('keyStatus').style.color = '#34c472';
+  }
+}
+
+function getApiKey() {
+  // Try input field first, then localStorage
+  var inputVal = (document.getElementById('apiKeyInput').value || '').trim();
+  if (inputVal.startsWith('sk-ant-')) {
+    localStorage.setItem('cot_api_key', inputVal);
+    return inputVal;
+  }
+  return localStorage.getItem('cot_api_key') || '';
+}
+
 // ---- CFTC API CONFIG ----
 // Legacy Futures Only — best for commercials/non-commercials, most history
 // Market names from CFTC database (exact strings matter)
@@ -1415,7 +1447,7 @@ Large Spec net: ${latest.specNet > 0 ? '+' : ''}${Math.round(latest.specNet).toL
 As of: ${latest.date}. COT horizon: 2–6 weeks forward.`;
   }
 
-  const apiKey = localStorage.getItem('cot_api_key') || '';
+  const apiKey = getApiKey();
   if (!apiKey) {
     out.innerHTML = `<div class="analysis-placeholder" style="color:var(--gold);">
       <div style="font-size:1.5rem;">🔑</div>
