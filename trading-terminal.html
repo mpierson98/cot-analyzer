@@ -246,7 +246,7 @@ input[type=file]{display:none;}
 <div class="hdr">
   <div>
     <div class="logo">Trading Terminal</div>
-    <div class="logo-sub">Mauricio Pierson · Chart Analysis</div>
+    <div class="logo-sub">Mauricio Pierson · Open Locally in Chrome</div>
   </div>
   <div class="hdr-sep"></div>
   <div>
@@ -268,7 +268,17 @@ input[type=file]{display:none;}
   </div>
 </div>
 
-<!-- LAYOUT -->
+<!-- SETUP BANNER -->
+<div id="setupBanner" style="background:rgba(212,165,58,.08);border-bottom:1px solid rgba(212,165,58,.2);padding:.55rem 1.4rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;position:relative;z-index:1;">
+  <span style="font-size:.75rem;">⚠️</span>
+  <span style="font-size:.58rem;color:#e0c878;line-height:1.6;">
+    <strong style="color:var(--gold2);">Run this file locally for best results.</strong>
+    Save the HTML file to your computer → open with Chrome → works instantly with no CORS errors.
+    GitHub Pages blocks direct API calls.
+  </span>
+  <button onclick="testConnection()" style="background:var(--card2);border:1px solid rgba(212,165,58,.3);color:var(--gold);font-family:'JetBrains Mono',monospace;font-size:.55rem;padding:.3rem .75rem;border-radius:3px;cursor:pointer;white-space:nowrap;">Test Connection</button>
+  <button onclick="document.getElementById('setupBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:var(--muted2);cursor:pointer;font-size:.9rem;">✕</button>
+</div>
 <div class="wrap">
 
   <!-- LEFT PANEL -->
@@ -558,10 +568,19 @@ function showAtab(name, btn) {
 // COT FETCH
 // ============================================================
 async function fetchCOT(market) {
+  const url = `${COT_URL}?$where=market_and_exchange_names='${market}'&$order=report_date_as_yyyy_mm_dd DESC&$limit=4`;
+  let rows = null;
+  // Try direct first, then proxy
   try {
-    const r = await fetch(`${COT_URL}?$where=market_and_exchange_names='${market}'&$order=report_date_as_yyyy_mm_dd DESC&$limit=4`);
-    const rows = await r.json();
-    if (!rows.length) return null;
+    const r = await fetch(url);
+    rows = await r.json();
+  } catch(e) {
+    try {
+      const r = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+      rows = await r.json();
+    } catch(e2) { return null; }
+  }
+  if (!rows?.length) return null;
     const l=rows[0], p=rows[1]||rows[0];
     const commNet=parseFloat(l.comm_positions_long_all||0)-parseFloat(l.comm_positions_short_all||0);
     const prevNet=parseFloat(p.comm_positions_long_all||0)-parseFloat(p.comm_positions_short_all||0);
@@ -604,12 +623,13 @@ async function generate() {
 
   try {
     ls(1);
+    const safeFetchCOT = async (market) => { try { return await fetchCOT(market); } catch(e) { return null; } };
     const [cotCoffee,cotGold,cotCorn,cotWheat,cotSoy] = await Promise.all([
-      fetchCOT('COFFEE C - ICE FUTURES U.S.'),
-      fetchCOT('GOLD - COMMODITY EXCHANGE INC.'),
-      fetchCOT('CORN - CHICAGO BOARD OF TRADE'),
-      fetchCOT('WHEAT-SRW - CHICAGO BOARD OF TRADE'),
-      fetchCOT('SOYBEANS - CHICAGO BOARD OF TRADE')
+      safeFetchCOT('COFFEE C - ICE FUTURES U.S.'),
+      safeFetchCOT('GOLD - COMMODITY EXCHANGE INC.'),
+      safeFetchCOT('CORN - CHICAGO BOARD OF TRADE'),
+      safeFetchCOT('WHEAT-SRW - CHICAGO BOARD OF TRADE'),
+      safeFetchCOT('SOYBEANS - CHICAGO BOARD OF TRADE')
     ]);
     cotData = {coffee:cotCoffee,gold:cotGold,corn:cotCorn,wheat:cotWheat,soy:cotSoy};
 
@@ -991,6 +1011,23 @@ function renderAnalysisTabs(t) {
 // ============================================================
 // KEY / TOAST
 // ============================================================
+async function testConnection() {
+  const key = getKey();
+  if (!key) { showToast('Enter API key first'); return; }
+  showToast('Testing connection...');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'Hi'}]})
+    });
+    const j = await res.json();
+    if (j.error) showToast('API error: '+j.error.message);
+    else showToast('✅ Connection works! Ready to analyze.', true);
+  } catch(e) {
+    showToast('❌ CORS blocked. Open this file locally in Chrome, not via GitHub Pages.');
+  }
+}
 function saveKey(v){v=v.trim();if(v.startsWith('sk-ant-')){localStorage.setItem('tt2_key',v);document.getElementById('keyStatus').textContent='✅';}else document.getElementById('keyStatus').textContent='🔑';}
 function loadKey(){const k=localStorage.getItem('tt2_key');if(k){document.getElementById('apiKey').value=k;document.getElementById('keyStatus').textContent='✅';}}
 function getKey(){const v=(document.getElementById('apiKey').value||'').trim();if(v.startsWith('sk-ant-')){localStorage.setItem('tt2_key',v);return v;}return localStorage.getItem('tt2_key')||'';}
