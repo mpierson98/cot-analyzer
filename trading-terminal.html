@@ -635,6 +635,27 @@ async function generate() {
 
     // Build message content — text + images
     ls(3);
+
+    // Resize image to max 1600px on longest side, compress to JPEG
+    async function resizeImage(base64DataURL, maxPx=1600, quality=0.82) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          let w=img.width, h=img.height;
+          if (w>maxPx||h>maxPx) {
+            if (w>h) { h=Math.round(h*maxPx/w); w=maxPx; }
+            else { w=Math.round(w*maxPx/h); h=maxPx; }
+          }
+          const canvas=document.createElement('canvas');
+          canvas.width=w; canvas.height=h;
+          const ctx=canvas.getContext('2d');
+          ctx.drawImage(img,0,0,w,h);
+          resolve(canvas.toDataURL('image/jpeg',quality));
+        };
+        img.src = base64DataURL;
+      });
+    }
+
     const messageContent = [];
 
     // System context text
@@ -667,9 +688,9 @@ Respond ONLY in valid JSON (no markdown, no preamble, no backticks):`});
         if (!img) continue;
         const inst = INSTRUMENTS[commKey];
         messageContent.push({type:'text', text:`\n--- ${inst.icon} ${inst.name} · ${tf.label} Chart ---`});
-        const base64Data = img.base64.split(',')[1];
-        const mediaType = img.type || 'image/png';
-        messageContent.push({type:'image', source:{type:'base64', media_type:mediaType, data:base64Data}});
+        const resized = await resizeImage(img.base64, 1600, 0.82);
+        const base64Data = resized.split(',')[1];
+        messageContent.push({type:'image', source:{type:'base64', media_type:'image/jpeg', data:base64Data}});
         imageCount++;
       }
     }
